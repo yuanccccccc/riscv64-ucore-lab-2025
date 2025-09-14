@@ -111,5 +111,3 @@ void interrupt_handler(struct trapframe *tf) {
 ```
 
 现在执行`make qemu`, 应该能看到打印一行行的`100 ticks`
-
-目前为止的代码可以在[这里](https://github.com/Liurunda/riscv64-ucore/tree/lab1/lab1)找到，遇到困难可以参考。

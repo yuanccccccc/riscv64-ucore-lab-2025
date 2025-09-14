@@ -1,5 +1,7 @@
-# 欢迎来到ucore step-by-step的世界
+# riscv64-ucore
+public repository for 2020 operating system course project "riscv64-ucore"
 
-*step by step, to the light of u*   ----[《Good Night》](https://music.163.com/#/song?id=1421195795)
+based on [bbl-ucore](https://github.com/ring00/bbl-ucore) and [ucore](https://github.com/chyyuu/ucore_os_lab)
 
-你好，冒险者。让我们一起进入ucore的内部，一步一步构建自己的操作系统！
+预编译好的riscv工具链下载
+https://www.sifive.com/boards

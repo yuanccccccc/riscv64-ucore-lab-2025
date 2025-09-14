@@ -19,7 +19,7 @@ uCore在实验四中只实现了一个最简单的FIFO调度器，其核心就�
 2．在proc\_list队列中查找下一个处于“就绪”态的线程或进程next；
 3．找到这样的进程后，就调用proc\_run函数，保存当前进程current的执行现场（进程上下文），恢复新进程的执行现场，完成进程切换。
 
-至此，新的进程next就开始执行了。由于在proc10中只有两个内核线程，且idleproc要让出CPU给initproc执行，我们可以看到schedule函数通过查找proc\_list进程队列，只能找到一个处于“就绪”态的initproc内核线程。并通过proc\_run和进一步的switch\_to函数完成两个执行现场的切换，具体流程如下：
+至此，新的进程next就开始执行了。由于在proc_list中只有两个内核线程，且idleproc要让出CPU给initproc执行，我们可以看到schedule函数通过查找proc\_list进程队列，只能找到一个处于“就绪”态的initproc内核线程。并通过proc\_run和进一步的switch\_to函数完成两个执行现场的切换，具体流程如下：
 
 1. 将当前运行的进程设置为要切换过去的进程
 2. 将页表换成新进程的页表

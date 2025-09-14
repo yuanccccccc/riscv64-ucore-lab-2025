@@ -12,8 +12,8 @@
 
 放心，这里不需要你自己写编译器。我们使用现有的riscv-gcc编译器即可。从https://github.com/riscv/riscv-gcc clone下来，然后在x86架构上编译riscv-gcc编译器为可执行的x86程序，就可以运行它，来把你的程序源代码编译成riscv架构的可执行文件了。这有点像绕口令，但只要有一点编译原理的基础就可以理解。不过，这个riscv-gcc仓库很大，而且自己编译工具链总是一件麻烦的事。
 
-其实，没必要那么麻烦，我们大可以使用别人已经编译好的编译器的可执行文件，也就是所谓的**预编译（prebuilt）**工具链，下载下来，放在你喜欢的地方（比如之前定义的**\$RISCV**），配好路径（把编译器的位置加到系统的**PATH**环境变量里），就能在终端使用了。我们推荐使用sifive公司提供的预编译工具链，进入https://d2pn104n81t9m2.cloudfront.net/products/tools/ ，找到 “Prebuilt RISC‑V GCC Toolchain and Emulator”，下载“GNU Embedded Toolchain ”中适合你的操作系统的版本即可。(注意，如果你是wsl, 需要下载适合ubuntu版本的编译器)
-将 RISCV/bin 添加到 bashrc当中，首先利用vim进入~/.bashrc文档，摁住ctrl+g，直接跳到最后一行，摁一下i键，进入插入模式，现在可以编辑文档了
+其实，没必要那么麻烦，我们大可以使用别人已经编译好的编译器的可执行文件，也就是所谓的**预编译（prebuilt）**工具链，下载下来，放在你喜欢的地方（比如之前定义的**\$RISCV**），配好路径（把编译器的位置加到系统的**PATH**环境变量里），就能在终端使用了。我们推荐使用sifive公司提供的预编译工具链，进入https://github.com/sifive/freedom-tools/releases ，找到并且下载适合你的操作系统的版本即可。(注意，如果你是wsl, 需要下载适合ubuntu版本的编译器)
+将安装包下的bin 添加到 bashrc当中，首先利用vim进入~/.bashrc文档，摁住ctrl+g，直接跳到最后一行，摁一下i键，进入插入模式，现在可以编辑文档了
 
 ```sh
 vim ~/.bashrc
@@ -52,7 +52,7 @@ $ tar xvJf qemu-4.1.1.tar.xz
 $ cd qemu-4.1.1
 $ ./configure --target-list=riscv32-softmmu,riscv64-softmmu
 $ make -j
-$ export PATH=$PWD/riscv32-softmmu:$PWD/riscv64-softmmu:$PATH
+$ sudo make install
 ```
 
 可查看[更详细的安装和使用命令][riscv-qemu]。
