@@ -1,71 +1,83 @@
 ### 从SBI到stdio
 
-OpenSBI作为运行在M态的软件（或者说固件）, 提供了一些接口供我们编写内核的时候使用。
+承接上一节的问题，我们需要在“一无所有”的环境中，创造出一个能用的 `cprintf` 函数。
 
-我们可以通过`ecall`指令(environment call)调用OpenSBI。通过寄存器传递给OpenSBI一个”调用编号“，如果编号在 `0-8` 之间，则由OpenSBI进行处理，否则交由我们自己的中断处理程序处理（暂未实现）。有时OpenSBI调用需要像函数调用一样传递参数，这里传递参数的方式也和函数调用一样，按照riscv的函数调用约定(calling convention)把参数放到寄存器里。可以阅读[SBI的详细文档](https://github.com/riscv/riscv-sbi-doc/blob/master/riscv-sbi.adoc)。
+> 如果我们在 Linux 下运行一个 C 程序，需要格式化输出，那么大一的同学都知道我们应该 `#include<stdio.h>`。于是我们在 `kern/init/init.c` 也这么写一句。**且慢！** 在 Linux 下，当我们调用 C 语言标准库的函数时，实际上依赖于 `glibc` 提供的运行时环境，也就是一定程度上依赖于操作系统提供的支持。那么这样的操作在逻辑上就是不通顺的，构成了一个**鸡生蛋蛋生鸡**的过程，你不能在开发一个操作系统的时候还要依赖另一个操作系统提供的代码环境支持（注意，这里的支持不是指虚拟机、模拟器等，后面会学到，标准库的printf本质上就是调用了操作系统内核提供的接口）。
 
-> 须知 ecall
->
-> **ecall**(environment call)，当我们在 S 态执行这条指令时，会触发一个 ecall-from-s-mode-exception，从而进入 M 模式中的中断处理流程（如设置定时器等）；当我们在 U 态执行这条指令时，会触发一个 ecall-from-u-mode-exception，从而进入 S 模式中的中断处理流程（常用来进行系统调用）。
+那怎么办呢？只能自己动手，丰衣足食。解决问题的起点，是RISC-V架构下的机器态固件——OpenSBI。QEMU 内置的 OpenSBI 固件为我们提供了一个最原始的“输出一个字符”的接口。我们的任务就是抓住这个原始的接口，像搭积木一样，层层封装，最终构建出我们需要的、功能强大的 `cprintf` 函数
 
-C语言并不能直接调用`ecall`, 需要通过内联汇编来实现。
+#### 什么是 OpenSBI？
+
+您可以将其理解为一套预先安装在机器（M模式）上的标准函数库。这套库提供了一些基础服务，比如设置定时器、发送处理器间中断（IPI），以及我们最需要的控制台输入输出。
+
+然而，调用这些函数不能像普通函数那样使用 `call` 指令。因为我们的内核运行在 `S` 模式，而 `SBI` 服务运行在更高的 `M` 模式。跨越这种特权级别的调用，需要使用特殊的指令——`ecall`（Environment Call）。
+
+> 须知 `ecall`
+> `ecall` 指令是 RISC-V 中用于实现受控的权限提升的关键指令。
+> 当在 U 模式（用户态）执行 `ecall`，会触发异常，从而陷入到 S 模式（内核态）。这是系统调用的底层机制。
+> 当在 S 模式（内核态）执行 `ecall`，会触发异常，从而陷入到 M 模式（机器态）。这正是我们调用 `OpenSBI` 服务的方式。
+
+#### 如何调用 `SBI` 服务？
+
+通过 `ecall` 调用 `SBI` 服务，需要遵循一个明确的调用约定。这个过程类似于在一个预定义的表格中查找一个功能号，然后按照固定的规则传递参数（后面会学习到这就是系统调用的调用格式），最后执行一个特殊指令来触发它。
+
+1. 指定服务编号：将想要调用的 `SBI` 功能编号（例如，`SBI_CONSOLE_PUTCHAR` = 1）放入指定的寄存器（通常是 a7 或 x17）。
+2. 传递参数：根据 `RISC-V` 的函数调用约定（Calling Convention），将参数放入寄存器 `a0`, `a1`, `a2`（即 `x10`, `x11`, `x12`）。
+3. 执行调用：执行 `ecall` 指令。`CPU` 会 trap 到 `M` 模式，由 `OpenSBI` 固件处理请求。
+4. 获取返回值：处理完成后，`OpenSBI` 会将返回值放入 `a0`（`x10`）寄存器，然后返回。
+
+#### 为什么需要内联汇编？
+
+在 `C` 语言中，我们无法直接执行 `ecall` 这样的特定指令，也无法精确控制哪个变量放入哪个寄存器。因此，我们必须借助内联汇编（`Inline Assembly`） 来“手动”完成上述步骤，将底层指令的调用封装成一个对 `C` 语言友好的函数。
+
+下面的代码实现了最核心的 SBI 调用封装：
 
 ```c
 // libs/sbi.c
 #include <sbi.h>
 #include <defs.h>
 
-//SBI编号和函数的对应
+// SBI 功能编号清单
 uint64_t SBI_SET_TIMER = 0;
 uint64_t SBI_CONSOLE_PUTCHAR = 1;
 uint64_t SBI_CONSOLE_GETCHAR = 2;
-uint64_t SBI_CLEAR_IPI = 3;
-uint64_t SBI_SEND_IPI = 4;
-uint64_t SBI_REMOTE_FENCE_I = 5;
-uint64_t SBI_REMOTE_SFENCE_VMA = 6;
-uint64_t SBI_REMOTE_SFENCE_VMA_ASID = 7;
-uint64_t SBI_SHUTDOWN = 8;
-//sbi_call函数是我们关注的核心
+// ... 其他功能编号
+
+// sbi_call - 通用的 SBI 调用函数
+// @sbi_type: SBI 功能编号
+// @arg0, arg1, arg2: 传递给 SBI 服务的参数
+// 返回值：SBI 服务返回的结果
 uint64_t sbi_call(uint64_t sbi_type, uint64_t arg0, uint64_t arg1, uint64_t arg2) {
     uint64_t ret_val;
+
     __asm__ volatile (
-        "mv x17, %[sbi_type]\n"
-        "mv x10, %[arg0]\n"
-        "mv x11, %[arg1]\n"
-        "mv x12, %[arg2]\n"   //mv操作把参数的数值放到寄存器里
-        "ecall\n"    //参数放好之后，通过ecall, 交给OpenSBI来执行
-        "mv %[ret_val], x10"  
-        //OpenSBI按照riscv的calling convention,把返回值放到x10寄存器里
-        //我们还需要自己通过内联汇编把返回值拿到我们的变量里
+        // 1. 将功能编号和参数放入指定的寄存器
+        "mv x17, %[sbi_type]\n" // 功能编号 -> x17 (a7)
+        "mv x10, %[arg0]\n"     // arg0 -> x10 (a0)
+        "mv x11, %[arg1]\n"     // arg1 -> x11 (a1)
+        "mv x12, %[arg2]\n"     // arg2 -> x12 (a2)
+
+        // 2. 执行 ecall 指令，发起调用
+        "ecall\n"
+
+        // 3. 将返回值（在 x10/a0 中）移动到 C 变量 ret_val 中
+        "mv %[ret_val], x10"
+
+        // 输出操作数：将汇编的结果输出到C变量ret_val
         : [ret_val] "=r" (ret_val)
+        // 输入操作数：将C变量sbi_type, arg0, arg1, arg2的值作为输入传给汇编
         : [sbi_type] "r" (sbi_type), [arg0] "r" (arg0), [arg1] "r" (arg1), [arg2] "r" (arg2)
+        // 告知编译器：内联汇编可能会读取或写入内存，防止编译器优化时出错
         : "memory"
     );
     return ret_val;
 }
 
+// 基于通用的 sbi_call，封装出专用的字符输出函数
 void sbi_console_putchar(unsigned char ch) {
-    sbi_call(SBI_CONSOLE_PUTCHAR, ch, 0, 0); //注意这里ch隐式类型转换为int64_t
-}
-
-void sbi_set_timer(unsigned long long stime_value) {
-    sbi_call(SBI_SET_TIMER, stime_value, 0, 0);
+    sbi_call(SBI_CONSOLE_PUTCHAR, ch, 0, 0);
 }
 ```
-
-> 须知 函数调用与calling convention
->
-> 我们知道，编译器将高级语言源代码翻译成汇编代码。对于汇编语言而言，在最简单的编程模型中，所能够利用的只有指令集中提供的指令、各通用寄存器、 CPU 的状态、内存资源。那么，在高级语言中，我们进行一次函数调用，编译器要做哪些工作利用汇编语言来实现这一功能呢？
->
-> 显然并不是仅用一条指令跳转到被调用函数开头地址就行了。我们还需要考虑：
->
-> - 如何传递参数？
-> - 如何传递返回值？
-> - 如何保证函数返回后能从我们期望的位置继续执行？
->
-> 等更多事项。通常编译器按照某种规范去翻译所有的函数调用，这种规范被称为 [calling convention](https://en.wikipedia.org/wiki/Calling_convention) 。值得一提的是，为了实现函数调用，我们需要预先分配一块内存作为 **调用栈** ，后面会看到调用栈在函数调用过程中极其重要。你也可以理解为什么第一章刚开始我们就要分配栈了。
->
-> 可以参考[riscv calling convention](https://riscv.org/wp-content/uploads/2015/01/riscv-calling.pdf)
 
 这样我们就可以通过`sbi_console_putchar()`来输出一个字符。接下来我们要做的事情就像月饼包装，把它封了一层又一层。
 
