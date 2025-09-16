@@ -108,7 +108,7 @@ SECTIONS
     .globl kern_entry # 使得ld能够看到kern_entry这个符号所在的位置, globl和global同义
     # https://sourceware.org/binutils/docs/as/Global.html#Global
 kern_entry: 
-    la sp, bootstacktop 
+    la sp, bootstacktop
     tail kern_init 
 #开始data section
 .section .data
