@@ -31,7 +31,7 @@ struct Page *alloc_pages(size_t n) {
 }
 ```
 
-类似`pmm_manager`, 我们定义`swap_manager`, 组合页面置换需要的一些函数接口。
+类似`pmm_manager`, 我们定义`swap_manager`，它封装了一组函数指针接口，用来组合页面置换所需的各种操作：
 
 ```c
 // kern/mm/swap.h
@@ -56,6 +56,8 @@ struct swap_manager
      int (*check_swap)(void);
 };
 ```
+
+这里的设计有点类似 **C++ 里的虚函数机制**。`swap_manager` 只定义了接口（函数指针），不关心具体实现。不同的页面置换算法（如 FIFO、LRU 等）只需要提供各自的函数实现，并把这些函数指针赋值到 `swap_manager` 中。当调用 `sm->swap_out_victim(mm, &page, in_tick)` 时，实际执行的是具体算法的版本（比如 FIFO 的实现）。这种基于函数指针的“虚函数表”设计，它让内核可以在运行时灵活切换不同的算法或策略，而无需修改框架代码。
 
 我们来看`swap_in()`, `swap_out()`如何换入/换出一个页面.注意我们对物理页面的 `Page`结构体做了一些改动。
 
@@ -178,10 +180,10 @@ int swap_set_unswappable(struct mm_struct *mm, uintptr_t addr)
 }
 ```
 
-`kern/mm/swap_fifo.h`完成了FIFO置换算法最终的具体实现。我们所做的就是维护了一个队列（用链表实现）。
+在 `kern/mm/swap_fifo.c` 里，我们给 `swap_manager` 填上了 FIFO 算法的实现。核心思想是维护一个队列（用链表实现）：新换入的页面插入到队列尾部，换出时选择队列头部（最早换入）的页面。
 
 ```c
-// kern/mm/swap_fifo.h
+// kern/mm/swap_fifo.c
 #ifndef __KERN_MM_SWAP_FIFO_H__
 #define __KERN_MM_SWAP_FIFO_H__
 
@@ -261,8 +263,12 @@ static int _fifo_set_unswappable(struct mm_struct *mm, uintptr_t addr)
 
 static int _fifo_tick_event(struct mm_struct *mm)//时钟中断的时候什么都不做
 { return 0; }
+```
 
+这里通过结构体初始化，把一组函数地址绑定到 `swap_manager_fifo`，以后框架只要调用 `sm->swap_out_victim(...)` 这样的接口，实际上就会跳到 FIFO 的实现函数去执行。换句话说，框架只管调用接口，不关心背后是哪种算法。
 
+```c
+// kern/mm/swap_fifo.c
 struct swap_manager swap_manager_fifo =
 {
      .name            = "fifo swap manager",

@@ -125,7 +125,9 @@ static inline void __list_del(list_entry_t *prev, list_entry_t *next) __attribut
 
 看起来`list.h`里面定义的`list_entry`并没有数据域，但是，如果我们把`list_entry`作为其他结构体的成员，就可以利用C语言结构体内存连续布局的特点，从``list_entry`的地址获得它所在的上一级结构体。
 
-于是我们定义了可以连成链表的`Page`结构体和一系列对它做操作的宏。这个结构体用来管理物理内存。
+于是我们定义了可以连成链表的`Page`结构体和一系列对它做操作的宏。这个结构体用来管理物理内存。此时，`page_link` 就是 `list_entry` 类型的节点，它把一批 `Page` 串起来形成空闲链表。但是当我们在链表中遍历时，手里只有 `list_entry*`，要怎么拿到它对应的 `Page*` 呢？
+
+这里就用到了 `le2page` 宏。它的作用是，给定 `list_entry* le`，以及 `member = page_link`，利用 `to_struct` 宏，从 `le` 的地址向前偏移，得到 `Page` 结构体的首地址，最终返回 `Page*`。这种技巧本质上是 “container_of” 的用法（Linux 内核里大量使用），即从结构体中的某个成员指针，反推出整个结构体指针。
 
 ```c
 // libs/defs.h
@@ -178,8 +180,6 @@ typedef struct {
 } free_area_t;
 
 ```
-
-
 
 我们知道，物理内存通常是一片 RAM ，我们可以把它看成一个以字节为单位的大数组，通过物理地址找到对应的位置进行读写。但是，物理地址**并不仅仅**只能访问物理内存，也可以用来访问其他的外设，因此你也可以认为物理内存也算是一种外设。
 
