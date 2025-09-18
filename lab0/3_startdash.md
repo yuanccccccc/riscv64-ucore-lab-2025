@@ -2,7 +2,7 @@
 
 说了这么多，现在该动手了。Make your hands dirty!
 
-方便起见，可以先在终端里设置一个叫做**RISCV**的环境变量(在bash命令里可以通过**$RISCV**使用)，作为你安装所有和riscv有关的软件的路径。在`/etc/profile`里面写一行`export RISCV=/your/path/to/riscv`之类的东西就行。后面安装的各个项目最好也放在上面的的路径里面。
+方便起见，可以先在终端里设置一个叫做**RISCV**的环境变量(在bash命令里可以通过**$RISCV**使用)，作为你安装所有和riscv有关的软件的路径。在`/etc/profile`里面写一行`export RISCV=/your/path/to/riscv`之类的东西(例如`/opt/riscv`)就行。后面安装的各个项目最好也放在上面的的路径里面。
 
 <details>
 <summary>环境变量原理解释</summary>
