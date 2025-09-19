@@ -54,7 +54,23 @@ export PATH=$RISCV/bin:$PATH
 
 **WSL**中无法使用图形化编辑器，推荐使用nano编辑器，教程的博客为：https://blog.csdn.net/qq_41964263/article/details/148450309 。
 
-注意配置现在还没有生效！需要使用source命令使其生效：
+首先利用在终端输入以下命令编辑 ~/.bashrc 文件：
+
+```sh
+nano ~/.bashrc
+```
+在 nano 中，按下 Ctrl + _，然后按下 Ctrl + V，这会将光标直接跳到文件的最后一行。
+
+在文件的最后一行，输入修改内容。你需要添加以下两行来设置路径：
+
+```shell
+export RISCV=PATH_TO_INSTALL（你RISCV预编译链下载的路径）
+export PATH=$RISCV/bin:$PATH
+```
+
+输入完成后，按下 Ctrl + O 来保存文件，系统会提示你确认文件名，直接按 Enter 键确认保存。保存文件后，按下 Ctrl + X 退出 nano。
+
+不管是虚拟机还是WSL，注意配置现在还没有生效！需要使用source命令使其生效：
 
 ```shell
 source ~/.bashrc
