@@ -70,6 +70,8 @@ export PATH=$RISCV/bin:$PATH
 
 输入完成后，按下 Ctrl + O 来保存文件，系统会提示你确认文件名，直接按 Enter 键确认保存。保存文件后，按下 Ctrl + X 退出 nano。
 
+ps:使用vscode打开虚机/wsl的根目录，找到.bashrc文件并添加以上内容，可以实现同样的效果。
+
 不管是虚拟机还是WSL，注意配置现在还没有生效！需要使用source命令使其生效：
 
 ```shell
