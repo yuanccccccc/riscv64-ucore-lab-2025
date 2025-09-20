@@ -7,6 +7,7 @@
 [参考教程](https://blog.csdn.net/thisway_diy/article/details/108728087)
 
 (2) nano
+
 nano 是一款在终端中使用的轻量级文本编辑器，界面简洁、上手容易，适合快速查看与修改配置文件或代码片段。与 vi/vim 相比，nano 的常用操作在屏幕底部都有提示，学习成本较低。
 [参考教程](https://blog.csdn.net/qq_41964263/article/details/148450309)
 
@@ -18,10 +19,14 @@ nano 是一款在终端中使用的轻量级文本编辑器，界面简洁、上
 - 剪切/粘贴整行：Ctrl+K / Ctrl+U
 - 跳转到行号：Ctrl+_（下划线），输入行号回车
 
-安装：
-- Ubuntu：sudo apt-get install nano
+Ubuntu中的安装指令为：
+
+```shell
+sudo apt-get install nano
+```
 
 (3) VSCode
+
 如果你已经厌倦了命令行的操作，那么是时候使用一些真正现代化的工具了，相信你已经在其他课程中使用过它，如果还没有的话，现在下载也完全来得及。
 关于使用VSCode在虚拟机或者wsl进行开发的连接方式，有以下内容作为参考：
 [配置教程-虚拟机](https://blog.csdn.net/qq_45223683/article/details/141140237)

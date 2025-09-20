@@ -2,7 +2,7 @@
 
 #### lab1的项目组成如下:
 
-```c
+```
 ── Makefile 
 ├── kern
 │   ├── debug
