@@ -5,42 +5,19 @@
 
 (1) Ubuntu 下自带的编辑器可以作为代码编辑的工具。例如 gedit 是 gnome 桌面环境下兼容UTF-8的文本编辑器。它十分的简单易用，有良好的语法高亮，对中文支持很好。通常可以通过双击或者命令行打开目标文件进行编辑。
 
-(2) Vim 编辑器：Vim是一款极方便的文本编辑软件，是UNIX下的同类型软件VI的改进版本。Vim经常被看作是“专门为程序员打造的文本编辑器”，功能强大且方便使用，便于进行程序开发。
-Ubuntu 下默认安装的 vi 版本较低，功能较弱，建议在系统内安装或者升级到最新版本的 Vim。
+(2) nano
+nano 是一款在终端中使用的轻量级文本编辑器，界面简洁、上手容易，适合快速查看与修改配置文件或代码片段。与 vi/vim 相比，nano 的常用操作在屏幕底部都有提示，学习成本较低。
 
-[1]关于Vim的常用命令以及使用，可以通过网络进行查找。
+常用操作：
+- 打开文件：nano 文件名
+- 保存：Ctrl+O（回车确认）
+- 退出：Ctrl+X（有修改会提示是否保存）
+- 搜索：Ctrl+W
+- 剪切/粘贴整行：Ctrl+K / Ctrl+U
+- 跳转到行号：Ctrl+_（下划线），输入行号回车
 
-[2]配置文件：Vim 的使用需要配置文件进行设置，例如：
-
-	set nocompatible
-	set encoding=utf-8
-	set fileencodings=utf-8,chinese
-	set tabstop=4
-	set cindent shiftwidth=4
-	set backspace=indent,eol,start
-	autocmd Filetype c set omnifunc=ccomplete#Complete
-	autocmd Filetype cpp set omnifunc=cppcomplete#Complete
-	set incsearch
-	set number
-	set display=lastline
-	set ignorecase
-	syntax on
-	set nobackup
-	set ruler
-	set showcmd
-	set smartindent
-	set hlsearch
-	set cmdheight=1
-	set laststatus=2
-	set shortmess=atI
-	set formatoptions=tcrqn
-	set autoindent  
-
-可以将上述配置文件保存到：
-
-	~/.vimrc
-
-注意：.vimrc 默认情况下隐藏不可见，可以在命令行中通过 “ls -a” 命令进行查看。如果 '~' 目录下不存在该文件，可以手动创建。修改该文件以后，重启 Vim 可以使配置生效。
+安装：
+- Ubuntu：sudo apt-get install nano
 
 (3) VSCode
 如果你已经厌倦了命令行的操作，那么是时候使用一些真正现代化的工具了，相信你已经在其他课程中使用过它，如果还没有的话，现在下载也完全来得及。
