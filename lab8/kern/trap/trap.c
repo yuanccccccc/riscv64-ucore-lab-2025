@@ -149,7 +149,6 @@ void interrupt_handler(struct trapframe *tf) {
             clock_set_next_event();
             ++ticks;
             run_timer_list();
-            dev_stdin_write(cons_getc());
             break;
         case IRQ_H_TIMER:
             cprintf("Hypervisor software interrupt\n");
@@ -272,6 +271,7 @@ static inline void trap_dispatch(struct trapframe* tf) {
 void
 trap(struct trapframe *tf) {
     // dispatch based on what type of trap occurred
+//    cputs("some trap");
     if (current == NULL) {
         trap_dispatch(tf);
     } else {

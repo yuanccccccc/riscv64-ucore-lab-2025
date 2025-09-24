@@ -54,7 +54,7 @@ mm_create(void) {
         else mm->sm_priv = NULL;
         
         set_mm_count(mm, 0);
-        sem_init(&(mm->mm_sem), 1);
+        lock_init(&(mm->mm_lock));
     }    
     return mm;
 }
@@ -421,7 +421,6 @@ do_pgfault(struct mm_struct *mm, uint_t error_code, uintptr_t addr) {
     ret = -E_NO_MEM;
 
     pte_t *ptep=NULL;
-
     /* Maybe you want help comment, BELOW comments can help you finish the code
     *
     * Some Useful MACROs and DEFINEs, you can use them in below implementation.
@@ -450,8 +449,7 @@ do_pgfault(struct mm_struct *mm, uint_t error_code, uintptr_t addr) {
             cprintf("pgdir_alloc_page in do_pgfault failed\n");
             goto failed;
         }
-    }
-    else { // if this pte is a swap entry, then load data from disk to a page with phy addr
+    }else { // if this pte is a swap entry, then load data from disk to a page with phy addr
            // and call page_insert to map the phy addr with logical addr
         /*LAB3 EXERCISE 3: YOUR CODE
         * 请你根据以下信息提示，补充函数
@@ -476,6 +474,12 @@ do_pgfault(struct mm_struct *mm, uint_t error_code, uintptr_t addr) {
             //map of phy addr <--->
             //logical addr
             //(3) make the page swappable.
+            /*if ((ret = swap_in(mm, addr, &page)) != 0) {
+                cprintf("swap_in in do_pgfault failed\n");
+                goto failed;
+            }    
+            page_insert(mm->pgdir, page, addr, perm);
+            swap_map_swappable(mm, addr, page, 1);*/
             page->pra_vaddr = addr;
         }
         else {

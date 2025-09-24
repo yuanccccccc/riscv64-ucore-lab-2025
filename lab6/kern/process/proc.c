@@ -103,22 +103,12 @@ alloc_proc(void) {
      *       uint32_t flags;                             // Process flag
      *       char name[PROC_NAME_LEN + 1];               // Process name
      */
-     //LAB4:EXERCISE1 YOUR CODE
+
      //LAB5 YOUR CODE : (update LAB4 steps)
-    /*
+     /*
      * below fields(add in LAB5) in proc_struct need to be initialized  
      *       uint32_t wait_state;                        // waiting state
      *       struct proc_struct *cptr, *yptr, *optr;     // relations between processes
-     */
-     //LAB6 YOUR CODE : (update LAB5 steps)
-    /*
-     * below fields(add in LAB6) in proc_struct need to be initialized
-     *     struct run_queue *rq;                       // running queue contains Process
-     *     list_entry_t run_link;                      // the entry linked in run queue
-     *     int time_slice;                             // time slice for occupying the CPU
-     *     skew_heap_entry_t lab6_run_pool;            // FOR LAB6 ONLY: the entry in the run pool
-     *     uint32_t lab6_stride;                       // FOR LAB6 ONLY: the current stride of the process
-     *     uint32_t lab6_priority;                     // FOR LAB6 ONLY: the priority of process, set by lab6_set_priority(uint32_t)
      */
     }
     return proc;
@@ -216,6 +206,7 @@ proc_run(struct proc_struct *proc) {
         *   lcr3():                   Modify the value of CR3 register
         *   switch_to():              Context switching between two processes
         */
+
     }
 }
 
@@ -405,13 +396,14 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
     //    7. set ret vaule using child proc's pid
 
     //LAB5 YOUR CODE : (update LAB4 steps)
+    //TIPS: you should modify your written code in lab4(step1 and step5), not add more code.
    /* Some Functions
     *    set_links:  set the relation links of process.  ALSO SEE: remove_links:  lean the relation links of process 
     *    -------------------
     *    update step 1: set child proc's parent to current process, make sure current process's wait_state is 0
     *    update step 5: insert proc_struct into hash_list && proc_list, set the relation links of process
     */
-
+ 
 fork_out:
     return ret;
 
@@ -612,6 +604,7 @@ load_icode(unsigned char *binary, size_t size) {
      *          hint: check meaning of SPP, SPIE in SSTATUS, use them by SSTATUS_SPP, SSTATUS_SPIE(defined in risv.h)
      */
 
+
     ret = 0;
 out:
     return ret;
@@ -754,6 +747,7 @@ do_kill(int pid) {
 static int
 kernel_execve(const char *name, unsigned char *binary, size_t size) {
     int64_t ret=0, len = strlen(name);
+ //   ret = do_execve(name, len, binary, size);
     asm volatile(
         "li a0, %1\n"
         "lw a1, %2\n"
@@ -796,7 +790,7 @@ user_main(void *arg) {
 #ifdef TEST
     KERNEL_EXECVE2(TEST, TESTSTART, TESTSIZE);
 #else
-    KERNEL_EXECVE(priority);
+    KERNEL_EXECVE(exit);
 #endif
     panic("user_main execve failed.\n");
 }
@@ -871,12 +865,4 @@ cpu_idle(void) {
         }
     }
 }
-//FOR LAB6, set the process's priority (bigger value will get more CPU time)
-void
-lab6_set_priority(uint32_t priority)
-{
-    cprintf("set priority to %d\n", priority);
-    if (priority == 0)
-        current->lab6_priority = 1;
-    else current->lab6_priority = priority;
-}
+

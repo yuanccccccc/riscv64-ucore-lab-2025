@@ -11,7 +11,7 @@ void cputchar(int c);
 int cputs(const char *str);
 int getchar(void);
 
-/* kern/libs/readline.c */
+/* libs/readline.c */
 char *readline(const char *prompt);
 
 /* libs/printfmt.c */

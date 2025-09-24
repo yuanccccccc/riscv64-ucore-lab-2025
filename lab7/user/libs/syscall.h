@@ -13,7 +13,5 @@ int sys_gettime(void);
 /* FOR LAB6 ONLY */
 void sys_lab6_set_priority(uint64_t priority);
 
-int sys_sleep(uint64_t time);
-
 #endif /* !__USER_LIBS_SYSCALL_H__ */
 

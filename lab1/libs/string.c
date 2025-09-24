@@ -1,5 +1,4 @@
 #include <string.h>
-#include <riscv.h>
 
 /* *
  * strlen - calculate the length of the string @s, not including

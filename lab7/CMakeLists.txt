@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.17)
-project(lab7 C)
+project(lab6 C)
 
 set(CMAKE_C_STANDARD 11)
 
@@ -21,7 +21,7 @@ include_directories(tools)
 include_directories(user)
 include_directories(user/libs)
 
-add_executable(lab7
+add_executable(lab6
         kern/debug/assert.h
         kern/debug/kdebug.c
         kern/debug/kdebug.h
@@ -66,14 +66,7 @@ add_executable(lab7
         kern/schedule/default_sched_stride.c
         kern/schedule/sched.c
         kern/schedule/sched.h
-        kern/sync/check_sync.c
-        kern/sync/monitor.c
-        kern/sync/monitor.h
-        kern/sync/sem.c
-        kern/sync/sem.h
         kern/sync/sync.h
-        kern/sync/wait.c
-        kern/sync/wait.h
         kern/syscall/syscall.c
         kern/syscall/syscall.h
         kern/trap/trap.c
@@ -116,8 +109,6 @@ add_executable(lab7
         user/matrix.c
         user/pgdir.c
         user/priority.c
-        user/sleep.c
-        user/sleepkill.c
         user/softint.c
         user/spin.c
         user/testbss.c

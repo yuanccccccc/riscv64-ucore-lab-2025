@@ -213,7 +213,7 @@ TARGETS: $(TARGETS)
 
 QEMUOPTS = -hda $(UCOREIMG) -drive file=$(SWAPIMG),media=disk,cache=writeback
 
-.PHONY: qemu
+.PHONY: qemu spike
 qemu: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
 #	$(V)$(QEMU) -kernel $(UCOREIMG) -nographic
 	$(V)$(QEMU) \
@@ -235,6 +235,9 @@ gdb:
     -ex 'file bin/kernel' \
     -ex 'set arch riscv:rv64' \
     -ex 'target remote localhost:1234'
+
+spike: $(UCOREIMG)
+	$(V)$(SPIKE) $(UCOREIMG)
 
 RUN_PREFIX	:= _binary_$(OBJDIR)_$(USER_PREFIX)
 MAKEOPTS	:= --quiet --no-print-directory

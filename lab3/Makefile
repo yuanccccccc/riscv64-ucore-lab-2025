@@ -1,13 +1,11 @@
-PROJ	:= lab3
+PROJ	:= lab1
 EMPTY	:=
 SPACE	:= $(EMPTY) $(EMPTY)
 SLASH	:= /
 
 V       := @
 
-#ifndef GCCPREFIX
 GCCPREFIX := riscv64-unknown-elf-
-#endif
 
 ifndef QEMU
 QEMU := qemu-system-riscv64
@@ -30,8 +28,8 @@ HOSTCFLAGS	:= -Wall -O2
 GDB		:= $(GCCPREFIX)gdb
 
 CC		:= $(GCCPREFIX)gcc
-CFLAGS  := -mcmodel=medany -O2 -s -std=gnu99 -Wall -Wextra
-CFLAGS	+= -fno-builtin -nostdinc $(DEFS)
+CFLAGS  := -mcmodel=medany -std=gnu99 -Wno-unused -Werror
+CFLAGS	+= -fno-builtin -Wall -O2 -nostdinc $(DEFS)
 CFLAGS	+= -fno-stack-protector -ffunction-sections -fdata-sections
 CFLAGS	+= -g
 CTYPE	:= c S
@@ -60,11 +58,14 @@ ALLOBJS	:=
 ALLDEPS	:=
 TARGETS	:=
 
+# include some predefined function
 include tools/function.mk
 
 listf_cc = $(call listf,$(1),$(CTYPE))
 
-
+# for cc
+add_files_cc = $(call add_files,$(1),$(CC),$(CFLAGS) $(3),$(2),$(4))
+create_target_cc = $(call create_target,$(1),$(2),$(3),$(CC),$(CFLAGS))
 
 # for hostcc
 add_files_host = $(call add_files,$(1),$(HOSTCC),$(HOSTCFLAGS),$(2),$(3))
@@ -85,18 +86,10 @@ match = $(shell echo $(2) | $(AWK) '{for(i=1;i<=NF;i++){if(match("$(1)","^"$$(i)
 INCLUDE	+= libs/
 
 CFLAGS	+= $(addprefix -I,$(INCLUDE))
-LIBDIR	+= libs
-CFLAGS2 := $(CFLAGS) -D ucore_test
-# for cc
-add_files_cc = $(call add_files,$(1),$(CC),$(CFLAGS) $(3),$(2),$(4))
-add_files_cc2 = $(call add_files,$(1),$(CC),$(CFLAGS2) $(3),$(2),$(4))
-create_target_cc = $(call create_target,$(1),$(2),$(3),$(CC),$(CFLAGS))
 
-ifeq ($(MAKECMDGOAL),test)
-$(call add_files_cc2,$(call listf_cc,$(LIBDIR)),libs,)
-else
+LIBDIR	+= libs
+
 $(call add_files_cc,$(call listf_cc,$(LIBDIR)),libs,)
-endif
 
 # -------------------------------------------------------------------
 # kernel
@@ -105,16 +98,14 @@ KINCLUDE	+= kern/debug/ \
 			   kern/driver/ \
 			   kern/trap/ \
 			   kern/mm/ \
-			   kern/sync/ \
-			   kern/fs/
+			   kern/arch/
 
 KSRCDIR		+= kern/init \
 			   kern/libs \
 			   kern/debug \
 			   kern/driver \
 			   kern/trap \
-			   kern/mm \
-			   kern/fs
+			   kern/mm
 
 KCFLAGS		+= $(addprefix -I,$(KINCLUDE))
 
@@ -191,8 +182,7 @@ gdb:
     -ex 'set arch riscv:rv64' \
     -ex 'target remote localhost:1234'
 
-	
-test: qemu
+
 spike: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
 	$(V)$(SPIKE) $(UCOREIMG)
 
@@ -208,7 +198,7 @@ MAKEOPTS		:= --quiet --no-print-directory
 
 grade:
 	$(V)$(MAKE) $(MAKEOPTS) clean
-	$(V)$(SH) tools/grade.sh
+	$(V)$(SH) tools/grade-rv64-patch.sh
 
 touch:
 	$(V)$(foreach f,$(TOUCH_FILES),$(TOUCH) $(f))

@@ -15,7 +15,6 @@ syscall(int64_t num, ...) {
         a[i] = va_arg(ap, uint64_t);
     }
     va_end(ap);
-
     asm volatile (
         "lw a0, %1\n"
         "lw a1, %2\n"
@@ -86,9 +85,4 @@ void
 sys_lab6_set_priority(uint64_t priority)
 {
     syscall(SYS_lab6_set_priority, priority);
-}
-
-int
-sys_sleep(uint64_t time) {
-    return syscall(SYS_sleep, time);
 }
