@@ -239,14 +239,7 @@ void free_pages(struct Page *base, size_t n) {
 // nr_free_pages - call pmm->nr_free_pages to get the size (nr*PAGESIZE)
 // of current free memory
 size_t nr_free_pages(void) {
-    size_t ret;
-    bool intr_flag;
-    local_intr_save(intr_flag);
-    {
-        ret = pmm_manager->nr_free_pages();
-    }
-    local_intr_restore(intr_flag);
-    return ret;
+    return pmm_manager->nr_free_pages();
 }
 ```
 
