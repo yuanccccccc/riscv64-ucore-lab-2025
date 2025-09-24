@@ -21,6 +21,7 @@ int
 kern_init(void) {
     extern char edata[], end[];
     memset(edata, 0, end - edata);
+
     cons_init();                // init the console
 
     const char *message = "(THU.CST) os is loading ...";
@@ -43,7 +44,7 @@ kern_init(void) {
 
     clock_init();               // init clock interrupt
     intr_enable();              // enable irq interrupt
-    
+
     cpu_idle();                 // run idle process
 }
 
@@ -54,7 +55,7 @@ grade_backtrace2(int arg0, int arg1, int arg2, int arg3) {
 
 void __attribute__((noinline))
 grade_backtrace1(int arg0, int arg1) {
-    grade_backtrace2(arg0, (int64_t)&arg0, arg1, (int64_t)&arg1);
+    grade_backtrace2(arg0, (int)&arg0, arg1, (int)&arg1);
 }
 
 void __attribute__((noinline))
@@ -64,7 +65,7 @@ grade_backtrace0(int arg0, int arg1, int arg2) {
 
 void
 grade_backtrace(void) {
-    grade_backtrace0(0, (int64_t)kern_init, 0xffff0000);
+    grade_backtrace0(0, (int)kern_init, 0xffff0000);
 }
 
 static void

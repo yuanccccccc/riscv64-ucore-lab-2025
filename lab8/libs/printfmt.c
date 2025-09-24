@@ -3,7 +3,6 @@
 #include <error.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 
 /* *
  * Space or zero padding and a field width are supported for the numeric
@@ -26,24 +25,11 @@ static const char * const error_string[MAXERROR + 1] = {
     [E_INVAL_ELF]           "invalid elf file",
     [E_KILLED]              "process is killed",
     [E_PANIC]               "panic failure",
-    [E_NO_DEV]              "no such device",
-    [E_NA_DEV]              "device not available",
-    [E_BUSY]                "device/file is busy",
-    [E_NOENT]               "no such file or directory",
-    [E_ISDIR]               "is a directory",
-    [E_NOTDIR]              "not a directory",
-    [E_XDEV]                "cross device link",
-    [E_UNIMP]               "unimplemented feature",
-    [E_SEEK]                "illegal seek",
-    [E_MAX_OPEN]            "too many files are open",
-    [E_EXISTS]              "file or directory already exists",
-    [E_NOTEMPTY]            "directory is not empty",
 };
 
 /* *
  * printnum - print a number (base <= 16) in reverse order
  * @putch:      specified putch function, print a single character
- * @fd:         file descriptor
  * @putdat:     used by @putch function
  * @num:        the number will be printed
  * @base:       base for print, must be in [1, 16]
@@ -51,21 +37,27 @@ static const char * const error_string[MAXERROR + 1] = {
  * @padc:       character that padded on the left if the actual width is less than @width
  * */
 static void
-printnum(void (*putch)(int, void*, int), int fd, void *putdat,
+printnum(void (*putch)(int, void*), void *putdat,
         unsigned long long num, unsigned base, int width, int padc) {
     unsigned long long result = num;
     unsigned mod = do_div(result, base);
 
     // first recursively print all preceding (more significant) digits
     if (num >= base) {
-        printnum(putch, fd, putdat, result, base, width - 1, padc);
+        printnum(putch, putdat, result, base, width - 1, padc);
     } else {
         // print any needed pad characters before first digit
         while (-- width > 0)
-            putch(padc, putdat, fd);
+            putch(padc, putdat);
     }
     // then print this (the least significant) digit
-    putch("0123456789abcdef"[mod], putdat, fd);
+    putch("0123456789abcdef"[mod], putdat);
+
+    // Crashes if num >= base. No idea what going on here
+    // Here is a quick fix
+    // update: Stack grows downward and destory the SBI
+    // sbi_console_putchar("0123456789abcdef"[mod]);
+    // (*(int *)putdat)++;
 }
 
 /* *
@@ -107,23 +99,21 @@ getint(va_list *ap, int lflag) {
 /* *
  * printfmt - format a string and print it by using putch
  * @putch:      specified putch function, print a single character
- * @fd:         file descriptor
  * @putdat:     used by @putch function
  * @fmt:        the format string to use
  * */
 void
-printfmt(void (*putch)(int, void*, int), int fd, void *putdat, const char *fmt, ...) {
+printfmt(void (*putch)(int, void*), void *putdat, const char *fmt, ...) {
     va_list ap;
 
     va_start(ap, fmt);
-    vprintfmt(putch, fd, putdat, fmt, ap);
+    vprintfmt(putch, putdat, fmt, ap);
     va_end(ap);
 }
 
 /* *
  * vprintfmt - format a string and print it by using putch, it's called with a va_list
  * instead of a variable number of arguments
- * @fd:         file descriptor
  * @putch:      specified putch function, print a single character
  * @putdat:     used by @putch function
  * @fmt:        the format string to use
@@ -133,7 +123,7 @@ printfmt(void (*putch)(int, void*, int), int fd, void *putdat, const char *fmt, 
  * Or you probably want printfmt() instead.
  * */
 void
-vprintfmt(void (*putch)(int, void*, int), int fd, void *putdat, const char *fmt, va_list ap) {
+vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap) {
     register const char *p;
     register int ch, err;
     unsigned long long num;
@@ -144,7 +134,7 @@ vprintfmt(void (*putch)(int, void*, int), int fd, void *putdat, const char *fmt,
             if (ch == '\0') {
                 return;
             }
-            putch(ch, putdat, fd);
+            putch(ch, putdat);
         }
 
         // Process a %-escape sequence
@@ -201,7 +191,7 @@ vprintfmt(void (*putch)(int, void*, int), int fd, void *putdat, const char *fmt,
 
         // character
         case 'c':
-            putch(va_arg(ap, int), putdat, fd);
+            putch(va_arg(ap, int), putdat);
             break;
 
         // error message
@@ -211,10 +201,10 @@ vprintfmt(void (*putch)(int, void*, int), int fd, void *putdat, const char *fmt,
                 err = -err;
             }
             if (err > MAXERROR || (p = error_string[err]) == NULL) {
-                printfmt(putch, fd, putdat, "error %d", err);
+                printfmt(putch, putdat, "error %d", err);
             }
             else {
-                printfmt(putch, fd, putdat, "%s", p);
+                printfmt(putch, putdat, "%s", p);
             }
             break;
 
@@ -225,19 +215,19 @@ vprintfmt(void (*putch)(int, void*, int), int fd, void *putdat, const char *fmt,
             }
             if (width > 0 && padc != '-') {
                 for (width -= strnlen(p, precision); width > 0; width --) {
-                    putch(padc, putdat, fd);
+                    putch(padc, putdat);
                 }
             }
             for (; (ch = *p ++) != '\0' && (precision < 0 || -- precision >= 0); width --) {
                 if (altflag && (ch < ' ' || ch > '~')) {
-                    putch('?', putdat, fd);
+                    putch('?', putdat);
                 }
                 else {
-                    putch(ch, putdat, fd);
+                    putch(ch, putdat);
                 }
             }
             for (; width > 0; width --) {
-                putch(' ', putdat, fd);
+                putch(' ', putdat);
             }
             break;
 
@@ -245,7 +235,7 @@ vprintfmt(void (*putch)(int, void*, int), int fd, void *putdat, const char *fmt,
         case 'd':
             num = getint(&ap, lflag);
             if ((long long)num < 0) {
-                putch('-', putdat, fd);
+                putch('-', putdat);
                 num = -(long long)num;
             }
             base = 10;
@@ -265,8 +255,8 @@ vprintfmt(void (*putch)(int, void*, int), int fd, void *putdat, const char *fmt,
 
         // pointer
         case 'p':
-            putch('0', putdat, fd);
-            putch('x', putdat, fd);
+            putch('0', putdat);
+            putch('x', putdat);
             num = (unsigned long long)(uintptr_t)va_arg(ap, void *);
             base = 16;
             goto number;
@@ -276,17 +266,17 @@ vprintfmt(void (*putch)(int, void*, int), int fd, void *putdat, const char *fmt,
             num = getuint(&ap, lflag);
             base = 16;
         number:
-            printnum(putch, fd, putdat, num, base, width, padc);
+            printnum(putch, putdat, num, base, width, padc);
             break;
 
         // escaped '%' character
         case '%':
-            putch(ch, putdat, fd);
+            putch(ch, putdat);
             break;
 
         // unrecognized escape sequence - just print it literally
         default:
-            putch('%', putdat, fd);
+            putch('%', putdat);
             for (fmt --; fmt[-1] != '%'; fmt --)
                 /* do nothing */;
             break;
@@ -351,7 +341,7 @@ vsnprintf(char *str, size_t size, const char *fmt, va_list ap) {
         return -E_INVAL;
     }
     // print the string to the buffer
-    vprintfmt((void*)sprintputch, NO_FD, &b, fmt, ap);
+    vprintfmt((void*)sprintputch, &b, fmt, ap);
     // null terminate the buffer
     *b.buf = '\0';
     return b.cnt;

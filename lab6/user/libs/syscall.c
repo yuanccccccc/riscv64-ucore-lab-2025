@@ -15,24 +15,19 @@ syscall(int64_t num, ...) {
         a[i] = va_arg(ap, uint64_t);
     }
     va_end(ap);
+
     asm volatile (
-        "lw a0, %1\n"
-        "lw a1, %2\n"
-        "lw a2, %3\n"
-        "lw a3, %4\n"
-        "lw a4, %5\n"
-        "lw a5, %6\n"
+        "ld a0, %1\n"
+        "ld a1, %2\n"
+        "ld a2, %3\n"
+        "ld a3, %4\n"
+        "ld a4, %5\n"
+    	"ld a5, %6\n"
         "ecall\n"
-        "sw a0, %0"
+        "sd a0, %0"
         : "=m" (ret)
-        : "m" (num),
-          "m" (a[0]),
-          "m" (a[1]),
-          "m" (a[2]),
-          "m" (a[3]),
-          "m" (a[4])
-        : "memory"
-      );
+        : "m"(num), "m"(a[0]), "m"(a[1]), "m"(a[2]), "m"(a[3]), "m"(a[4])
+        :"memory");
     return ret;
 }
 
@@ -76,13 +71,3 @@ sys_pgdir(void) {
     return syscall(SYS_pgdir);
 }
 
-int
-sys_gettime(void) {
-    return syscall(SYS_gettime);
-}
-
-void
-sys_lab6_set_priority(uint64_t priority)
-{
-    syscall(SYS_lab6_set_priority, priority);
-}

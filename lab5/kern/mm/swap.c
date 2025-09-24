@@ -6,8 +6,6 @@
 #include <memlayout.h>
 #include <pmm.h>
 #include <mmu.h>
-#include <default_pmm.h>
-#include <kdebug.h>
 
 // the valid vaddr for check is between 0~CHECK_VALID_VADDR-1
 #define CHECK_VALID_VIR_PAGE_NUM 5
@@ -34,12 +32,15 @@ swap_init(void)
 {
      swapfs_init();
 
+     // if (!(1024 <= max_swap_offset && max_swap_offset < MAX_SWAP_OFFSET_LIMIT))
+     // {
+     //      panic("bad max_swap_offset %08x.\n", max_swap_offset);
+     // }
      // Since the IDE is faked, it can only store 7 pages at most to pass the test
      if (!(7 <= max_swap_offset &&
         max_swap_offset < MAX_SWAP_OFFSET_LIMIT)) {
         panic("bad max_swap_offset %08x.\n", max_swap_offset);
      }
-     
 
      sm = &swap_manager_fifo;
      int r = sm->init();
@@ -266,10 +267,8 @@ check_swap(void)
      } 
 
      //free_page(pte2page(*temp_ptep));
-
-     mm->pgdir = NULL;
+     
      mm_destroy(mm);
-     check_mm_struct = NULL;
 
      pde_t *pd1=pgdir,*pd0=page2kva(pde2page(boot_pgdir[0]));
      free_page(pde2page(pd0[0]));

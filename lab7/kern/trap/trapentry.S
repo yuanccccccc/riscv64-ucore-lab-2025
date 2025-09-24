@@ -79,7 +79,7 @@ _save_kernel_sp:
     # Save unwound kernel stack pointer in sscratch
     addi s0, sp, 36 * REGBYTES
     csrw sscratch, s0
-_restore_context:
+_restore_context:  # 用户态需要恢复，内核态直接sp+36*8
     csrw sstatus, s1
     csrw sepc, s2
 

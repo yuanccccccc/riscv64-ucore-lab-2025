@@ -1,9 +1,6 @@
 #include <defs.h>
 #include <stdio.h>
 #include <syscall.h>
-#include <file.h>
-#include <ulib.h>
-#include <unistd.h>
 
 /* *
  * cputch - writes a single character @c to stdout, and it will
@@ -27,7 +24,7 @@ cputch(int c, int *cnt) {
 int
 vcprintf(const char *fmt, va_list ap) {
     int cnt = 0;
-    vprintfmt((void*)cputch, NO_FD, &cnt, fmt, ap);
+    vprintfmt((void*)cputch, &cnt, fmt, ap);
     return cnt;
 }
 
@@ -63,27 +60,3 @@ cputs(const char *str) {
     return cnt;
 }
 
-
-static void
-fputch(char c, int *cnt, int fd) {
-    write(fd, &c, sizeof(char));
-    (*cnt) ++;
-}
-
-int
-vfprintf(int fd, const char *fmt, va_list ap) {
-    int cnt = 0;
-    vprintfmt((void*)fputch, fd, &cnt, fmt, ap);
-    return cnt;
-}
-
-int
-fprintf(int fd, const char *fmt, ...) {
-    va_list ap;
-
-    va_start(ap, fmt);
-    int cnt = vfprintf(fd, fmt, ap);
-    va_end(ap);
-
-    return cnt;
-}

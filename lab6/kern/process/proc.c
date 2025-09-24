@@ -103,12 +103,15 @@ alloc_proc(void) {
      *       uint32_t flags;                             // Process flag
      *       char name[PROC_NAME_LEN + 1];               // Process name
      */
+
      //LAB5 YOUR CODE : (update LAB4 steps)
-    /*
+     /*
      * below fields(add in LAB5) in proc_struct need to be initialized  
      *       uint32_t wait_state;                        // waiting state
      *       struct proc_struct *cptr, *yptr, *optr;     // relations between processes
      */
+
+    
         proc->state = PROC_UNINIT;
         proc->pid = -1;
         proc->runs = 0;
@@ -121,14 +124,9 @@ alloc_proc(void) {
         proc->cr3 = boot_cr3;
         proc->flags = 0;
         memset(proc->name, 0, PROC_NAME_LEN);
+        // lab5 add:
         proc->wait_state = 0;
         proc->cptr = proc->optr = proc->yptr = NULL;
-        proc->rq = NULL; //初始化运行队列为空
-	list_init(&(proc->run_link));//初始化运行队列的指针
-        proc->time_slice = 0;
-        proc->lab6_run_pool.left = proc->lab6_run_pool.right = proc->lab6_run_pool.parent = NULL;
-        proc->lab6_stride = 0;
-        proc->lab6_priority = 0;
     }
     return proc;
 }
@@ -216,6 +214,16 @@ get_pid(void) {
 void
 proc_run(struct proc_struct *proc) {
     if (proc != current) {
+        // LAB4:EXERCISE3 YOUR CODE
+        /*
+        * Some Useful MACROs, Functions and DEFINEs, you can use them in below implementation.
+        * MACROs or Functions:
+        *   local_intr_save():        Disable interrupts
+        *   local_intr_restore():     Enable Interrupts
+        *   lcr3():                   Modify the value of CR3 register
+        *   switch_to():              Context switching between two processes
+        */
+
         bool intr_flag;
         struct proc_struct *prev = current, *next = proc;
         local_intr_save(intr_flag);
@@ -414,6 +422,7 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
     //    7. set ret vaule using child proc's pid
 
     //LAB5 YOUR CODE : (update LAB4 steps)
+    //TIPS: you should modify your written code in lab4(step1 and step5), not add more code.
    /* Some Functions
     *    set_links:  set the relation links of process.  ALSO SEE: remove_links:  lean the relation links of process 
     *    -------------------
@@ -639,19 +648,14 @@ load_icode(unsigned char *binary, size_t size) {
     uintptr_t sstatus = tf->status;
     memset(tf, 0, sizeof(struct trapframe));
     /* LAB5:EXERCISE1 YOUR CODE
-     * should set tf_cs,tf_ds,tf_es,tf_ss,tf_esp,tf_eip,tf_eflags
+     * should set tf->gpr.sp, tf->epc, tf->status
      * NOTICE: If we set trapframe correctly, then the user level process can return to USER MODE from kernel. So
-     *          tf_cs should be USER_CS segment (see memlayout.h)
-     *          tf_ds=tf_es=tf_ss should be USER_DS segment
-     *          tf_esp should be the top addr of user stack (USTACKTOP)
-     *          tf_eip should be the entry point of this binary program (elf->e_entry)
-     *          tf_eflags should be set to enable computer to produce Interrupt
+     *          tf->gpr.sp should be user stack top (the value of sp)
+     *          tf->epc should be entry point of user program (the value of sepc)
+     *          tf->status should be appropriate for user program (the value of sstatus)
+     *          hint: check meaning of SPP, SPIE in SSTATUS, use them by SSTATUS_SPP, SSTATUS_SPIE(defined in risv.h)
      */
-    // tf->tf_cs = USER_CS;
-    // tf->tf_ds = tf->tf_es = tf->tf_ss = USER_DS;
-    // tf->tf_esp = USTACKTOP;
-    // tf->tf_eip = elf->e_entry;
-    // tf->tf_eflags |= FL_IF;
+
     tf->gpr.sp = USTACKTOP;
     tf->epc = elf->e_entry;
     tf->status = sstatus & ~(SSTATUS_SPP | SSTATUS_SPIE);
@@ -798,6 +802,7 @@ do_kill(int pid) {
 static int
 kernel_execve(const char *name, unsigned char *binary, size_t size) {
     int64_t ret=0, len = strlen(name);
+ //   ret = do_execve(name, len, binary, size);
     asm volatile(
         "li a0, %1\n"
         "lw a1, %2\n"
@@ -840,7 +845,7 @@ user_main(void *arg) {
 #ifdef TEST
     KERNEL_EXECVE2(TEST, TESTSTART, TESTSIZE);
 #else
-    KERNEL_EXECVE(priority);
+    KERNEL_EXECVE(exit);
 #endif
     panic("user_main execve failed.\n");
 }
@@ -915,12 +920,4 @@ cpu_idle(void) {
         }
     }
 }
-//FOR LAB6, set the process's priority (bigger value will get more CPU time)
-void
-lab6_set_priority(uint32_t priority)
-{
-    cprintf("set priority to %d\n", priority);
-    if (priority == 0)
-        current->lab6_priority = 1;
-    else current->lab6_priority = priority;
-}
+
