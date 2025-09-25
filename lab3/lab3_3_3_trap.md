@@ -8,23 +8,22 @@
 int kern_init(void) {
     extern char edata[], end[];
     memset(edata, 0, end - edata);
-
     cons_init();  // init the console
-
-    const char *message = "(THU.CST) os is loading ...\n";
-    cprintf("%s\n\n", message);
-
+    const char *message = "(THU.CST) os is loading ...\0";
+    //cprintf("%s\n\n", message);
+    cputs(message);
     print_kerninfo();
-
     // grade_backtrace();
-	
-    //trap.h的函数，初始化中断
     idt_init();  // init interrupt descriptor table
+    pmm_init();  // init physical memory management
+    idt_init();  // init interrupt descriptor table
+    clock_init();   // init clock interrupt
+    intr_enable();  // enable irq interrupt
+    // LAB3: CAHLLENGE 1 If you try to do it, uncomment lab3_switch_test()
+    // user/kernel mode switch test
+    // lab3_switch_test();
 
-    //clock.h的函数，初始化时钟中断
-    clock_init();  
-	//intr.h的函数，使能中断
-    intr_enable();  
+    /* do nothing */
     while (1)
         ;
 }
@@ -47,8 +46,6 @@ void intr_enable(void) { set_csr(sstatus, SSTATUS_SIE); }
 /* intr_disable - disable irq interrupt */
 void intr_disable(void) { clear_csr(sstatus, SSTATUS_SIE); }
 ```
-
-
 
 trap.c的中断处理函数trap, 实际上把中断处理,异常处理的工作分发给了interrupt_handler()，exception_handler(), 这些函数再根据中断或异常的不同类型来处理。
 
@@ -73,7 +70,6 @@ static inline void trap_dispatch(struct trapframe *tf) {
  * trapframe and then uses the iret instruction to return from the exception.
  * */
 void trap(struct trapframe *tf) { trap_dispatch(tf); }
-
 ```
 
 我们可以看到，interrupt_handler()和exception_handler()的实现还比较简单，只是简单地根据`scause`的数值更仔细地分了下类，做了一些输出就直接返回了。switch里的各种case, 如`IRQ_U_SOFT`,`CAUSE_USER_ECALL`,是riscv ISA 标准里规定的。我们在`riscv.h`里定义了这些常量。我们接下来主要关注时钟中断的处理。
@@ -101,7 +97,7 @@ void interrupt_handler(struct trapframe *tf) {
             break;
         case IRQ_S_TIMER:
             //时钟中断
-            /* LAB1 EXERCISE2   YOUR CODE :  */
+            /* LAB3 EXERCISE2   YOUR CODE :  */
             /*(1)设置下次时钟中断
              *(2)计数器（ticks）加一
              *(3)当计数器加到100的时候，我们会输出一个`100ticks`表示我们触发了100次时钟中断，同时打印次数（num）加一
@@ -140,7 +136,7 @@ void exception_handler(struct trapframe *tf) {
             break;
         case CAUSE_ILLEGAL_INSTRUCTION:
             //非法指令异常处理
-            /* LAB1 CHALLENGE3   YOUR CODE :  */
+            /* LAB3 CHALLENGE3   YOUR CODE :  */
             /*(1)输出指令异常类型（ Illegal instruction）
              *(2)输出异常指令地址
              *(3)更新 tf->epc寄存器
@@ -148,7 +144,7 @@ void exception_handler(struct trapframe *tf) {
             break;
         case CAUSE_BREAKPOINT:
             //非法指令异常处理
-            /* LAB1 CHALLLENGE3   YOUR CODE :  */
+            /* LAB3 CHALLLENGE3   YOUR CODE :  */
             /*(1)输出指令异常类型（ breakpoint）
              *(2)输出异常指令地址
              *(3)更新 tf->epc寄存器

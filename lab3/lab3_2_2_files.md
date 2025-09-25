@@ -1,9 +1,9 @@
 ### 项目组成和执行流
 
-#### Lab1项目组成
+#### Lab3项目组成
 
 ```
-lab1
+lab3
 ├── Makefile
 ├── kern
 │   ├── debug
@@ -35,7 +35,7 @@ lab1
 │       ├── trap.c
 │       ├── trap.h
 │       └── trapentry.S
-├── lab1.md
+├── lab3.md
 ├── libs
 │   ├── defs.h
 │   ├── error.h
