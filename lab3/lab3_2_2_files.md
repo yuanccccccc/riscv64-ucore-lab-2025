@@ -80,6 +80,6 @@ lab3
 
 #### 执行流
 
-内核初始化函数`kern_init()`的执行流：(从`kern/init/entry.S`进入) -> 输出一些信息说明正在初始化 -> 设置中断向量表(stvec）跳转到的地方为`kern/trap/trapentry.S`里的一个标记 ->在`kern/driver/clock.c`设置第一个时钟事件，使能时钟中断->设置全局的S  mode中断使能位-> 现在开始不断地触发时钟中断
+内核初始化函数`kern_init()`的执行流：(从`kern/init/entry.S`进入) -> 输出一些信息说明正在初始化 -> 设置中断向量表(stvec)跳转到的地方为`kern/trap/trapentry.S`里的一个标记 ->在`kern/driver/clock.c`设置第一个时钟事件，使能时钟中断->设置全局的S  mode中断使能位-> 现在开始不断地触发时钟中断
 
 产生一次时钟中断的执行流：set_sbi_timer()通过OpenSBI的时钟事件触发一个中断，跳转到`kern/trap/trapentry.S`的`__alltraps`标记 -> 保存当前执行流的上下文，并通过函数调用，切换为`kern/trap/trap.c`的中断处理函数`trap()`的上下文，进入`trap()`的执行流。切换前的上下文作为一个结构体，传递给`trap()`作为函数参数 -> `kern/trap/trap.c`按照中断类型进行分发(`trap_dispatch(), interrupt_handler()`)->执行时钟中断对应的处理语句，累加计数器，设置下一次时钟中断->完成处理，返回到`kern/trap/trapentry.S`->恢复原先的上下文，中断处理结束。
