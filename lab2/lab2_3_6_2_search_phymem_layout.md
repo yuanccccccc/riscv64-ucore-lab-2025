@@ -1,4 +1,4 @@
-#### 物理内存探测的设计思路
+#### 物理内存探测
 
 操作系统怎样知道物理内存所在的那段物理地址呢？在 RISC-V 中，这个一般是由 bootloader ，即 OpenSBI 来完成的。它来完成对于包括物理内存在内的各外设的扫描，将扫描结果以 DTB(Device Tree Blob) 的格式保存在物理内存中的某个地方。随后 OpenSBI 会将其地址保存在 `a1` 寄存器中，给我们使用。
 
@@ -31,26 +31,128 @@
 > | 0x40000000 | 0x80000000 | QEMU VIRT_PCIE_MMIO                                   |
 > | 0x80000000 | 0x88000000 | DRAM 缺省 128MB，大小可配置                           |
 
-不过为了简单起见，我们并不打算自己去解析这个结果。因为我们知道，Qemu 规定的 DRAM 物理内存的起始物理地址为 `0x80000000` 。而在 Qemu 中，可以使用 `-m` 指定 RAM 的大小，默认是 `128MiB` 。因此，默认的 DRAM 物理内存地址范围就是 `[0x80000000,0x88000000)` 。我们直接将 DRAM 物理内存结束地址硬编码到内核中：
+
+那么我们就可以很方便的从a1寄存器中读取设备树数据存储地址，在kern_entry的开头将设备树数据从a1寄存器中读取出来，并存入全局变量`boot_dtb`中（顺便读取了当前cpu核心号）
+```asm
+# kern\init\entry.S
+# a0: hartid
+# a1: dtb physical address
+# save hartid and dtb address
+la t0, boot_hartid
+sd a0, 0(t0)
+la t0, boot_dtb
+```
+
+在kern_entry部分的初始化结束，我们正式进入到kern_init之后，会执行dtb_init函数来读取设备树结构中储存的相关信息。对设备树结构感兴趣的可以点击[链接](https://blog.csdn.net/Rank_d/article/details/106289183)了解
 
 ```c
-// kern/mm/memlayout.h
+// kern\init\init.c
+int kern_init(void) {
+    extern char edata[], end[];
+    // 先清零 BSS，再读取并保存 DTB 的内存信息，避免被清零覆盖（为了解释变化 正式上传时我觉得应该删去这句话）
+    memset(edata, 0, end - edata);
+    dtb_init();
+    // 其他初始化
+}
+// kern\driver\dtb.c
+// 保存解析出的系统物理内存信息
+static uint64_t memory_base = 0;
+static uint64_t memory_size = 0;
 
-#define KERNBASE            0xFFFFFFFFC0200000 
-#define KMEMSIZE            0x7E00000          
-#define KERNTOP             (KERNBASE + KMEMSIZE) 
+void dtb_init(void) {
+    cprintf("DTB Init\n");
+    cprintf("HartID: %ld\n", boot_hartid);
+    cprintf("DTB Address: 0x%lx\n", boot_dtb);
+    
+    if (boot_dtb == 0) {
+        cprintf("Error: DTB address is null\n");
+        return;
+    }
+    
+    // 转换为虚拟地址
+    uintptr_t dtb_vaddr = boot_dtb + PHYSICAL_MEMORY_OFFSET;
+    const struct fdt_header *header = (const struct fdt_header *)dtb_vaddr;
+    
+    // 验证DTB
+    uint32_t magic = fdt32_to_cpu(header->magic);
+    if (magic != 0xd00dfeed) {
+        cprintf("Error: Invalid DTB magic number: 0x%x\n", magic);
+        return;
+    }
+    
+    // 提取内存信息
+    uint64_t mem_base, mem_size;
+    if (extract_memory_info(dtb_vaddr, header, &mem_base, &mem_size) == 0) {
+        cprintf("Physical Memory from DTB:\n");
+        cprintf("  Base: 0x%016lx\n", mem_base);
+        cprintf("  Size: 0x%016lx (%ld MB)\n", mem_size, mem_size / (1024 * 1024));
+        cprintf("  End:  0x%016lx\n", mem_base + mem_size - 1);
+        // 保存到全局变量，供 PMM 查询
+        memory_base = mem_base;
+        memory_size = mem_size;
+    } else {
+        cprintf("Warning: Could not extract memory info from DTB\n");
+    }
+    cprintf("DTB init completed\n");
+}
 
-#define PHYSICAL_MEMORY_END         0x88000000
-#define PHYSICAL_MEMORY_OFFSET      0xFFFFFFFF40000000 //物理地址和虚拟地址的偏移量
-#define KERNEL_BEGIN_PADDR          0x80200000
-#define KERNEL_BEGIN_VADDR          0xFFFFFFFFC0200000
 ```
+
+由此，我们就已经将内存的起点和大小读取到了全局变量`memory_base`和`memory_size`中，我们会在物理内存管理初始化的时候用到这些信息
+
+```c
+// kern\mm\pmm.c
+void pmm_init(void) {
+    // other things
+    page_init();
+    // other things
+}
+static void page_init(void) {
+    va_pa_offset = PHYSICAL_MEMORY_OFFSET;
+
+    uint64_t mem_begin = get_memory_base();
+    uint64_t mem_size  = get_memory_size();
+    if (mem_size == 0) {
+        panic("DTB memory info not available");
+    }
+    uint64_t mem_end   = mem_begin + mem_size;
+
+    cprintf("physcial memory map:\n");
+    cprintf("  memory: 0x%016lx, [0x%016lx, 0x%016lx].\n", mem_size, mem_begin,
+            mem_end - 1);
+
+    uint64_t maxpa = mem_end;
+
+    if (maxpa > KERNTOP) {
+        maxpa = KERNTOP;
+    }
+
+    extern char end[];
+
+    npage = maxpa / PGSIZE;
+    pages = (struct Page *)ROUNDUP((void *)end, PGSIZE);
+
+    for (size_t i = 0; i < npage - nbase; i++) {
+        SetPageReserved(pages + i);
+    }
+
+    uintptr_t freemem = PADDR((uintptr_t)pages + sizeof(struct Page) * (npage - nbase));
+
+    mem_begin = ROUNDUP(freemem, PGSIZE);
+    mem_end = ROUNDDOWN(mem_end, PGSIZE);
+    if (freemem < mem_end) {
+        init_memmap(pa2page(mem_begin), (mem_end - mem_begin) / PGSIZE);
+    }
+}
+```
+
+Qemu 规定的 DRAM 物理内存的起始物理地址为 `0x80000000` 。而在 Qemu 中，可以使用 `-m` 指定 RAM 的大小，默认是 `128MiB` 。因此，默认的 DRAM 物理内存地址范围就是 `[0x80000000,0x88000000)` 。
 
 但是，有一部分 DRAM 空间已经被占用，不能用来存别的东西了！
 
 - 物理地址空间 `[0x80000000,0x80200000)` 被 OpenSBI 占用；
 - 物理地址空间 `[0x80200000,KernelEnd)` 被内核各代码与数据段占用；
-- 其实设备树扫描结果 DTB 还占用了一部分物理内存，不过由于我们不打算使用它，所以可以将它所占用的空间用来存别的东西。
+- 其实设备树扫描结果 DTB 还占用了一部分物理内存，不过我们目前只在初始化的时读取其中的内存起点和长度信息，所以之后可以将它所占用的空间用来存别的东西。
 
 于是，我们可以用来存别的东西的物理内存的物理地址范围是：`[KernelEnd, 0x88000000)` 。这里的 `KernelEnd` 为内核代码结尾的物理地址。在 `kernel.ld` 中定义的 `end` 符号为内核代码结尾的虚拟地址。
 
