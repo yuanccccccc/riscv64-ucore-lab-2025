@@ -100,6 +100,10 @@ static int extract_memory_info(uintptr_t dtb_vaddr, const struct fdt_header *hea
     }
 }
 
+// 保存解析出的系统物理内存信息
+static uint64_t memory_base = 0;
+static uint64_t memory_size = 0;
+
 void dtb_init(void) {
     cprintf("DTB Init\n");
     cprintf("HartID: %ld\n", boot_hartid);
@@ -128,9 +132,19 @@ void dtb_init(void) {
         cprintf("  Base: 0x%016lx\n", mem_base);
         cprintf("  Size: 0x%016lx (%ld MB)\n", mem_size, mem_size / (1024 * 1024));
         cprintf("  End:  0x%016lx\n", mem_base + mem_size - 1);
+        // 保存到全局变量，供 PMM 查询
+        memory_base = mem_base;
+        memory_size = mem_size;
     } else {
         cprintf("Warning: Could not extract memory info from DTB\n");
     }
-    
     cprintf("DTB init completed\n");
+}
+
+uint64_t get_memory_base(void) {
+    return memory_base;
+}
+
+uint64_t get_memory_size(void) {
+    return memory_size;
 }

@@ -10,6 +10,7 @@
 #include <string.h>
 #include <../sync/sync.h>
 #include <riscv.h>
+#include <dtb.h>
 
 // virtual address of physical page array
 struct Page *pages;
@@ -83,9 +84,12 @@ size_t nr_free_pages(void) {
 static void page_init(void) {
     va_pa_offset = PHYSICAL_MEMORY_OFFSET;
 
-    uint64_t mem_begin = KERNEL_BEGIN_PADDR;
-    uint64_t mem_size = PHYSICAL_MEMORY_END - KERNEL_BEGIN_PADDR;
-    uint64_t mem_end = PHYSICAL_MEMORY_END; //硬编码取代 sbi_query_memory()接口
+    uint64_t mem_begin = get_memory_base();
+    uint64_t mem_size  = get_memory_size();
+    if (mem_size == 0) {
+        panic("DTB memory info not available");
+    }
+    uint64_t mem_end   = mem_begin + mem_size;
 
     cprintf("physcial memory map:\n");
     cprintf("  memory: 0x%016lx, [0x%016lx, 0x%016lx].\n", mem_size, mem_begin,
@@ -100,7 +104,6 @@ static void page_init(void) {
     extern char end[];
 
     npage = maxpa / PGSIZE;
-    //kernel在end[]结束, pages是剩下的页的开始
     pages = (struct Page *)ROUNDUP((void *)end, PGSIZE);
 
     for (size_t i = 0; i < npage - nbase; i++) {
