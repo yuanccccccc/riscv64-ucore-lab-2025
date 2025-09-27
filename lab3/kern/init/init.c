@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <trap.h>
+#include <dtb.h>
 
 int kern_init(void) __attribute__((noreturn));
 void grade_backtrace(void);
@@ -15,6 +16,7 @@ static void lab1_switch_test(void);
 
 int kern_init(void) {
     extern char edata[], end[];
+    dtb_init();
     memset(edata, 0, end - edata);
     cons_init();  // init the console
     const char *message = "(THU.CST) os is loading ...\0";
