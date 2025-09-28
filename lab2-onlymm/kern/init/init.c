@@ -3,6 +3,7 @@
 #include <pmm.h>
 #include <stdio.h>
 #include <string.h>
+#include <dtb.h>
 
 int kern_init(void) __attribute__((noreturn));
 void grade_backtrace(void);
@@ -28,6 +29,7 @@ void print_kerninfo(void) {
 int kern_init(void) {
     extern char edata[], end[];
     memset(edata, 0, end - edata);
+    dtb_init();
     cons_init();  // init the console
     const char *message = "(THU.CST) os is loading ...\0";
     //cprintf("%s\n\n", message);
