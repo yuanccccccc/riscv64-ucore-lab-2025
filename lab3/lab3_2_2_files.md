@@ -3,7 +3,6 @@
 #### Lab3项目组成
 
 ```
-lab3
 ├── Makefile
 ├── kern
 │   ├── debug
@@ -56,8 +55,6 @@ lab3
     ├── kernel.ld
     ├── sign.c
     └── vector.c
-
-9 directories, 43 files
 ```
 
 只介绍新增的或变动较大的文件。
