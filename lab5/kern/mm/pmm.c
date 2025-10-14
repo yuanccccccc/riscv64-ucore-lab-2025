@@ -23,9 +23,9 @@ uint_t va_pa_offset;
 const size_t nbase = DRAM_BASE / PGSIZE;
 
 // virtual address of boot-time page directory
-pde_t *boot_pgdir = NULL;
+pde_t *boot_pgdir_va = NULL;
 // physical address of boot-time page directory
-uintptr_t boot_cr3;
+uintptr_t boot_pgdir_pa;
 
 // physical memory management
 const struct pmm_manager *pmm_manager;
@@ -35,31 +35,36 @@ static void check_pgdir(void);
 static void check_boot_pgdir(void);
 
 // init_pmm_manager - initialize a pmm_manager instance
-static void init_pmm_manager(void) {
+static void init_pmm_manager(void)
+{
     pmm_manager = &default_pmm_manager;
     cprintf("memory management: %s\n", pmm_manager->name);
     pmm_manager->init();
 }
 
 // init_memmap - call pmm->init_memmap to build Page struct for free memory
-static void init_memmap(struct Page *base, size_t n) {
+static void init_memmap(struct Page *base, size_t n)
+{
     pmm_manager->init_memmap(base, n);
 }
 
 // alloc_pages - call pmm->alloc_pages to allocate a continuous n*PAGESIZE
 // memory
-struct Page *alloc_pages(size_t n) {
+struct Page *alloc_pages(size_t n)
+{
     struct Page *page = NULL;
     bool intr_flag;
 
-    while (1) {
+    while (1)
+    {
         local_intr_save(intr_flag);
         {
             page = pmm_manager->alloc_pages(n);
         }
         local_intr_restore(intr_flag);
 
-        if (page != NULL || n > 1 || swap_init_ok == 0) break;
+        if (page != NULL || n > 1 || swap_init_ok == 0)
+            break;
 
         extern struct mm_struct *check_mm_struct;
         // cprintf("page %x, call swap_out in alloc_pages %d\n",page, n);
@@ -70,7 +75,8 @@ struct Page *alloc_pages(size_t n) {
 }
 
 // free_pages - call pmm->free_pages to free a continuous n*PAGESIZE memory
-void free_pages(struct Page *base, size_t n) {
+void free_pages(struct Page *base, size_t n)
+{
     bool intr_flag;
     local_intr_save(intr_flag);
     {
@@ -81,7 +87,8 @@ void free_pages(struct Page *base, size_t n) {
 
 // nr_free_pages - call pmm->nr_free_pages to get the size (nr*PAGESIZE)
 // of current free memory
-size_t nr_free_pages(void) {
+size_t nr_free_pages(void)
+{
     size_t ret;
     bool intr_flag;
     local_intr_save(intr_flag);
@@ -93,7 +100,8 @@ size_t nr_free_pages(void) {
 }
 
 /* pmm_init - initialize the physical memory management */
-static void page_init(void) {
+static void page_init(void)
+{
     extern char kern_entry[];
 
     va_pa_offset = KERNBASE - 0x80200000;
@@ -108,7 +116,8 @@ static void page_init(void) {
 
     uint64_t maxpa = mem_end;
 
-    if (maxpa > KERNTOP) {
+    if (maxpa > KERNTOP)
+    {
         maxpa = KERNTOP;
     }
 
@@ -120,7 +129,8 @@ static void page_init(void) {
     // so stay away from it by adding extra offset to end
     pages = (struct Page *)ROUNDUP((void *)end, PGSIZE);
 
-    for (size_t i = 0; i < npage - nbase; i++) {
+    for (size_t i = 0; i < npage - nbase; i++)
+    {
         SetPageReserved(pages + i);
     }
 
@@ -128,13 +138,15 @@ static void page_init(void) {
 
     mem_begin = ROUNDUP(freemem, PGSIZE);
     mem_end = ROUNDDOWN(mem_end, PGSIZE);
-    if (freemem < mem_end) {
+    if (freemem < mem_end)
+    {
         init_memmap(pa2page(mem_begin), (mem_end - mem_begin) / PGSIZE);
     }
-    cprintf("vapaofset is %llu\n",va_pa_offset);
+    cprintf("vapaofset is %llu\n", va_pa_offset);
 }
-static void enable_paging(void) {
-    write_csr(satp, 0x8000000000000000 | (boot_cr3 >> RISCV_PGSHIFT));
+static void enable_paging(void)
+{
+    write_csr(satp, 0x8000000000000000 | (boot_pgdir_pa >> RISCV_PGSHIFT));
 }
 
 // boot_map_segment - setup&enable the paging mechanism
@@ -144,12 +156,14 @@ static void enable_paging(void) {
 //  pa:   physical address of this memory
 //  perm: permission of this memory
 static void boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size,
-                             uintptr_t pa, uint32_t perm) {
+                             uintptr_t pa, uint32_t perm)
+{
     assert(PGOFF(la) == PGOFF(pa));
     size_t n = ROUNDUP(size + PGOFF(la), PGSIZE) / PGSIZE;
     la = ROUNDDOWN(la, PGSIZE);
     pa = ROUNDDOWN(pa, PGSIZE);
-    for (; n > 0; n--, la += PGSIZE, pa += PGSIZE) {
+    for (; n > 0; n--, la += PGSIZE, pa += PGSIZE)
+    {
         pte_t *ptep = get_pte(pgdir, la, 1);
         assert(ptep != NULL);
         *ptep = pte_create(pa >> PGSHIFT, PTE_V | perm);
@@ -160,9 +174,11 @@ static void boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size,
 // return value: the kernel virtual address of this allocated page
 // note: this function is used to get the memory for PDT(Page Directory
 // Table)&PT(Page Table)
-static void *boot_alloc_page(void) {
+static void *boot_alloc_page(void)
+{
     struct Page *p = alloc_page();
-    if (p == NULL) {
+    if (p == NULL)
+    {
         panic("boot_alloc_page failed.\n");
     }
     return page2kva(p);
@@ -171,7 +187,8 @@ static void *boot_alloc_page(void) {
 // pmm_init - setup a pmm to manage physical memory, build PDT&PT to setup
 // paging mechanism
 //         - check the correctness of pmm & paging mechanism, print PDT&PT
-void pmm_init(void) {
+void pmm_init(void)
+{
     // We need to alloc/free the physical memory (granularity is 4KB or other
     // size).
     // So a framework of physical memory manager (struct pmm_manager)is defined
@@ -191,8 +208,8 @@ void pmm_init(void) {
     check_alloc_page();
     // create boot_pgdir, an initial page directory(Page Directory Table, PDT)
     extern char boot_page_table_sv39[];
-    boot_pgdir = (pte_t*)boot_page_table_sv39;
-    boot_cr3 = PADDR(boot_pgdir);
+    boot_pgdir_va = (pte_t *)boot_page_table_sv39;
+    boot_pgdir_pa = PADDR(boot_pgdir_va);
 
     check_pgdir();
 
@@ -201,7 +218,6 @@ void pmm_init(void) {
     // now the basic virtual memory map(see memalyout.h) is established.
     // check the correctness of the basic virtual memory map.
     check_boot_pgdir();
-
 
     kmalloc_init();
 }
@@ -213,11 +229,14 @@ void pmm_init(void) {
 //  la:     the linear address need to map
 //  create: a logical value to decide if alloc a page for PT
 // return vaule: the kernel virtual address of this pte
-pte_t *get_pte(pde_t *pgdir, uintptr_t la, bool create) {
+pte_t *get_pte(pde_t *pgdir, uintptr_t la, bool create)
+{
     pde_t *pdep1 = &pgdir[PDX1(la)];
-    if (!(*pdep1 & PTE_V)) {
+    if (!(*pdep1 & PTE_V))
+    {
         struct Page *page;
-        if (!create || (page = alloc_page()) == NULL) {
+        if (!create || (page = alloc_page()) == NULL)
+        {
             return NULL;
         }
         set_page_ref(page, 1);
@@ -226,9 +245,11 @@ pte_t *get_pte(pde_t *pgdir, uintptr_t la, bool create) {
         *pdep1 = pte_create(page2ppn(page), PTE_U | PTE_V);
     }
     pde_t *pdep0 = &((pte_t *)KADDR(PDE_ADDR(*pdep1)))[PDX0(la)];
-    if (!(*pdep0 & PTE_V)) {
+    if (!(*pdep0 & PTE_V))
+    {
         struct Page *page;
-        if (!create || (page = alloc_page()) == NULL) {
+        if (!create || (page = alloc_page()) == NULL)
+        {
             return NULL;
         }
         set_page_ref(page, 1);
@@ -240,12 +261,15 @@ pte_t *get_pte(pde_t *pgdir, uintptr_t la, bool create) {
 }
 
 // get_page - get related Page struct for linear address la using PDT pgdir
-struct Page *get_page(pde_t *pgdir, uintptr_t la, pte_t **ptep_store) {
+struct Page *get_page(pde_t *pgdir, uintptr_t la, pte_t **ptep_store)
+{
     pte_t *ptep = get_pte(pgdir, la, 0);
-    if (ptep_store != NULL) {
+    if (ptep_store != NULL)
+    {
         *ptep_store = ptep;
     }
-    if (ptep != NULL && *ptep & PTE_V) {
+    if (ptep != NULL && *ptep & PTE_V)
+    {
         return pte2page(*ptep);
     }
     return NULL;
@@ -254,25 +278,30 @@ struct Page *get_page(pde_t *pgdir, uintptr_t la, pte_t **ptep_store) {
 // page_remove_pte - free an Page sturct which is related linear address la
 //                - and clean(invalidate) pte which is related linear address la
 // note: PT is changed, so the TLB need to be invalidate
-static inline void page_remove_pte(pde_t *pgdir, uintptr_t la, pte_t *ptep) {
-    if (*ptep & PTE_V) {  //(1) check if this page table entry is
+static inline void page_remove_pte(pde_t *pgdir, uintptr_t la, pte_t *ptep)
+{
+    if (*ptep & PTE_V)
+    { //(1) check if this page table entry is
         struct Page *page =
-            pte2page(*ptep);  //(2) find corresponding page to pte
-        page_ref_dec(page);   //(3) decrease page reference
+            pte2page(*ptep); //(2) find corresponding page to pte
+        page_ref_dec(page);  //(3) decrease page reference
         if (page_ref(page) ==
-            0) {  //(4) and free this page when page reference reachs 0
+            0)
+        { //(4) and free this page when page reference reachs 0
             free_page(page);
         }
-        *ptep = 0;                  //(5) clear second page table entry
-        tlb_invalidate(pgdir, la);  //(6) flush tlb
+        *ptep = 0;                 //(5) clear second page table entry
+        tlb_invalidate(pgdir, la); //(6) flush tlb
     }
 }
 
 // page_remove - free an Page which is related linear address la and has an
 // validated pte
-void page_remove(pde_t *pgdir, uintptr_t la) {
+void page_remove(pde_t *pgdir, uintptr_t la)
+{
     pte_t *ptep = get_pte(pgdir, la, 0);
-    if (ptep != NULL) {
+    if (ptep != NULL)
+    {
         page_remove_pte(pgdir, la, ptep);
     }
 }
@@ -285,17 +314,23 @@ void page_remove(pde_t *pgdir, uintptr_t la) {
 //  perm:  the permission of this Page which is setted in related pte
 // return value: always 0
 // note: PT is changed, so the TLB need to be invalidate
-int page_insert(pde_t *pgdir, struct Page *page, uintptr_t la, uint32_t perm) {
+int page_insert(pde_t *pgdir, struct Page *page, uintptr_t la, uint32_t perm)
+{
     pte_t *ptep = get_pte(pgdir, la, 1);
-    if (ptep == NULL) {
+    if (ptep == NULL)
+    {
         return -E_NO_MEM;
     }
     page_ref_inc(page);
-    if (*ptep & PTE_V) {
+    if (*ptep & PTE_V)
+    {
         struct Page *p = pte2page(*ptep);
-        if (p == page) {
+        if (p == page)
+        {
             page_ref_dec(page);
-        } else {
+        }
+        else
+        {
             page_remove_pte(pgdir, la, ptep);
         }
     }
@@ -306,7 +341,8 @@ int page_insert(pde_t *pgdir, struct Page *page, uintptr_t la, uint32_t perm) {
 
 // invalidate a TLB entry, but only if the page tables being
 // edited are the ones currently in use by the processor.
-void tlb_invalidate(pde_t *pgdir, uintptr_t la) {
+void tlb_invalidate(pde_t *pgdir, uintptr_t la)
+{
     // flush_tlb();
     // The flush_tlb flush the entire TLB, is there any better way?
     asm volatile("sfence.vma %0" : : "r"(la));
@@ -315,14 +351,18 @@ void tlb_invalidate(pde_t *pgdir, uintptr_t la) {
 // pgdir_alloc_page - call alloc_page & page_insert functions to
 //                  - allocate a page size memory & setup an addr map
 //                  - pa<->la with linear address la and the PDT pgdir
-struct Page *pgdir_alloc_page(pde_t *pgdir, uintptr_t la, uint32_t perm) {
+struct Page *pgdir_alloc_page(pde_t *pgdir, uintptr_t la, uint32_t perm)
+{
     struct Page *page = alloc_page();
-    if (page != NULL) {
-        if (page_insert(pgdir, page, la, perm) != 0) {
+    if (page != NULL)
+    {
+        if (page_insert(pgdir, page, la, perm) != 0)
+        {
             free_page(page);
             return NULL;
         }
-        if (swap_init_ok) {
+        if (swap_init_ok)
+        {
             swap_map_swappable(check_mm_struct, la, page, 0);
             page->pra_vaddr = la;
             assert(page_ref(page) == 1);
@@ -336,91 +376,95 @@ struct Page *pgdir_alloc_page(pde_t *pgdir, uintptr_t la, uint32_t perm) {
     return page;
 }
 
-static void check_alloc_page(void) {
+static void check_alloc_page(void)
+{
     pmm_manager->check();
     cprintf("check_alloc_page() succeeded!\n");
 }
 
-static void check_pgdir(void) {
+static void check_pgdir(void)
+{
     // assert(npage <= KMEMSIZE / PGSIZE);
     // The memory starts at 2GB in RISC-V
     // so npage is always larger than KMEMSIZE / PGSIZE
     size_t nr_free_store;
 
-    nr_free_store=nr_free_pages();
+    nr_free_store = nr_free_pages();
 
     assert(npage <= KERNTOP / PGSIZE);
-    assert(boot_pgdir != NULL && (uint32_t)PGOFF(boot_pgdir) == 0);
-    assert(get_page(boot_pgdir, 0x0, NULL) == NULL);
+    assert(boot_pgdir_va != NULL && (uint32_t)PGOFF(boot_pgdir_va) == 0);
+    assert(get_page(boot_pgdir_va, 0x0, NULL) == NULL);
 
     struct Page *p1, *p2;
     p1 = alloc_page();
-    assert(page_insert(boot_pgdir, p1, 0x0, 0) == 0);
+    assert(page_insert(boot_pgdir_va, p1, 0x0, 0) == 0);
 
     pte_t *ptep;
-    assert((ptep = get_pte(boot_pgdir, 0x0, 0)) != NULL);
+    assert((ptep = get_pte(boot_pgdir_va, 0x0, 0)) != NULL);
     assert(pte2page(*ptep) == p1);
     assert(page_ref(p1) == 1);
 
-    ptep = (pte_t *)KADDR(PDE_ADDR(boot_pgdir[0]));
+    ptep = (pte_t *)KADDR(PDE_ADDR(boot_pgdir_va[0]));
     ptep = (pte_t *)KADDR(PDE_ADDR(ptep[0])) + 1;
-    assert(get_pte(boot_pgdir, PGSIZE, 0) == ptep);
+    assert(get_pte(boot_pgdir_va, PGSIZE, 0) == ptep);
 
     p2 = alloc_page();
-    assert(page_insert(boot_pgdir, p2, PGSIZE, PTE_U | PTE_W) == 0);
-    assert((ptep = get_pte(boot_pgdir, PGSIZE, 0)) != NULL);
+    assert(page_insert(boot_pgdir_va, p2, PGSIZE, PTE_U | PTE_W) == 0);
+    assert((ptep = get_pte(boot_pgdir_va, PGSIZE, 0)) != NULL);
     assert(*ptep & PTE_U);
     assert(*ptep & PTE_W);
-    assert(boot_pgdir[0] & PTE_U);
+    assert(boot_pgdir_va[0] & PTE_U);
     assert(page_ref(p2) == 1);
 
-    assert(page_insert(boot_pgdir, p1, PGSIZE, 0) == 0);
+    assert(page_insert(boot_pgdir_va, p1, PGSIZE, 0) == 0);
     assert(page_ref(p1) == 2);
     assert(page_ref(p2) == 0);
-    assert((ptep = get_pte(boot_pgdir, PGSIZE, 0)) != NULL);
+    assert((ptep = get_pte(boot_pgdir_va, PGSIZE, 0)) != NULL);
     assert(pte2page(*ptep) == p1);
     assert((*ptep & PTE_U) == 0);
 
-    page_remove(boot_pgdir, 0x0);
+    page_remove(boot_pgdir_va, 0x0);
     assert(page_ref(p1) == 1);
     assert(page_ref(p2) == 0);
 
-    page_remove(boot_pgdir, PGSIZE);
+    page_remove(boot_pgdir_va, PGSIZE);
     assert(page_ref(p1) == 0);
     assert(page_ref(p2) == 0);
 
-    assert(page_ref(pde2page(boot_pgdir[0])) == 1);
+    assert(page_ref(pde2page(boot_pgdir_va[0])) == 1);
 
-    pde_t *pd1=boot_pgdir,*pd0=page2kva(pde2page(boot_pgdir[0]));
+    pde_t *pd1 = boot_pgdir_va, *pd0 = page2kva(pde2page(boot_pgdir_va[0]));
     free_page(pde2page(pd0[0]));
     free_page(pde2page(pd1[0]));
-    boot_pgdir[0] = 0;
+    boot_pgdir_va[0] = 0;
     flush_tlb();
 
-    assert(nr_free_store==nr_free_pages());
+    assert(nr_free_store == nr_free_pages());
 
     cprintf("check_pgdir() succeeded!\n");
 }
 
-static void check_boot_pgdir(void) {
+static void check_boot_pgdir(void)
+{
     size_t nr_free_store;
     pte_t *ptep;
     int i;
 
-    nr_free_store=nr_free_pages();
+    nr_free_store = nr_free_pages();
 
-    for (i = ROUNDDOWN(KERNBASE, PGSIZE); i < npage * PGSIZE; i += PGSIZE) {
-        assert((ptep = get_pte(boot_pgdir, (uintptr_t)KADDR(i), 0)) != NULL);
+    for (i = ROUNDDOWN(KERNBASE, PGSIZE); i < npage * PGSIZE; i += PGSIZE)
+    {
+        assert((ptep = get_pte(boot_pgdir_va, (uintptr_t)KADDR(i), 0)) != NULL);
         assert(PTE_ADDR(*ptep) == i);
     }
 
-    assert(boot_pgdir[0] == 0);
+    assert(boot_pgdir_va[0] == 0);
 
     struct Page *p;
     p = alloc_page();
-    assert(page_insert(boot_pgdir, p, 0x100, PTE_W | PTE_R) == 0);
+    assert(page_insert(boot_pgdir_va, p, 0x100, PTE_W | PTE_R) == 0);
     assert(page_ref(p) == 1);
-    assert(page_insert(boot_pgdir, p, 0x100 + PGSIZE, PTE_W | PTE_R) == 0);
+    assert(page_insert(boot_pgdir_va, p, 0x100 + PGSIZE, PTE_W | PTE_R) == 0);
     assert(page_ref(p) == 2);
 
     const char *str = "ucore: Hello world!!";
@@ -430,20 +474,21 @@ static void check_boot_pgdir(void) {
     *(char *)(page2kva(p) + 0x100) = '\0';
     assert(strlen((const char *)0x100) == 0);
 
-    pde_t *pd1=boot_pgdir,*pd0=page2kva(pde2page(boot_pgdir[0]));
+    pde_t *pd1 = boot_pgdir_va, *pd0 = page2kva(pde2page(boot_pgdir_va[0]));
     free_page(p);
     free_page(pde2page(pd0[0]));
     free_page(pde2page(pd1[0]));
-    boot_pgdir[0] = 0;
+    boot_pgdir_va[0] = 0;
     flush_tlb();
 
-    assert(nr_free_store==nr_free_pages());
+    assert(nr_free_store == nr_free_pages());
 
     cprintf("check_boot_pgdir() succeeded!\n");
 }
 
 // perm2str - use string 'u,r,w,-' to present the permission
-static const char *perm2str(int perm) {
+static const char *perm2str(int perm)
+{
     static char str[4];
     str[0] = (perm & PTE_U) ? 'u' : '-';
     str[1] = 'r';
@@ -467,22 +512,29 @@ static const char *perm2str(int perm) {
 //  perm permission
 static int get_pgtable_items(size_t left, size_t right, size_t start,
                              uintptr_t *table, size_t *left_store,
-                             size_t *right_store) {
-    if (start >= right) {
+                             size_t *right_store)
+{
+    if (start >= right)
+    {
         return 0;
     }
-    while (start < right && !(table[start] & PTE_V)) {
+    while (start < right && !(table[start] & PTE_V))
+    {
         start++;
     }
-    if (start < right) {
-        if (left_store != NULL) {
+    if (start < right)
+    {
+        if (left_store != NULL)
+        {
             *left_store = start;
         }
         int perm = (table[start++] & PTE_USER);
-        while (start < right && (table[start] & PTE_USER) == perm) {
+        while (start < right && (table[start] & PTE_USER) == perm)
+        {
             start++;
         }
-        if (right_store != NULL) {
+        if (right_store != NULL)
+        {
             *right_store = start;
         }
         return perm;

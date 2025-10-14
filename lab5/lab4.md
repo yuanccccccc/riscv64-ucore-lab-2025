@@ -4,7 +4,7 @@
 
 ### 实现方法
 
-* 将proc_struct的state初始化为PROC_UNINIT，pid设为-1(表示未分配)，cr3设为boot_cr3
+* 将proc_struct的state初始化为PROC_UNINIT，pid设为-1(表示未分配)，pgdir设为boot_pgdir
 
 ### struct context context
 
@@ -30,7 +30,7 @@ ucore能保证进程pid的唯一，`get_pid`函数会依次增加last_pid的值�
 
 * 若当前的进程是能够响应中断的则暂时关闭当前进程的中断功能
 * 将proc的栈顶位置载入esp寄存器中
-* 将proc的页目录表地址载入cr3寄存器
+* 将proc的页目录表地址载入satp寄存器
 * 调用switch_to函数，切换到下一个函数执行
 * 返回后打开CPU中断功能
 
