@@ -92,7 +92,7 @@ void print_regs(struct pushregs* gpr) {
 }
 
 static inline void print_pgfault(struct trapframe *tf) {
-    cprintf("page fault at 0x%08x: %c/%c\n", tf->tval,
+    cprintf("page falut at 0x%08x: %c/%c\n", tf->tval,
             trap_in_kernel(tf) ? 'K' : 'U',
             tf->cause == CAUSE_STORE_PAGE_FAULT ? 'W' : 'R');
 }
@@ -149,6 +149,7 @@ void interrupt_handler(struct trapframe *tf) {
             clock_set_next_event();
             ++ticks;
             run_timer_list();
+            dev_stdin_write(cons_getc());
             break;
         case IRQ_H_TIMER:
             cprintf("Hypervisor software interrupt\n");
@@ -271,7 +272,6 @@ static inline void trap_dispatch(struct trapframe* tf) {
 void
 trap(struct trapframe *tf) {
     // dispatch based on what type of trap occurred
-//    cputs("some trap");
     if (current == NULL) {
         trap_dispatch(tf);
     } else {

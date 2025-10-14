@@ -3,7 +3,6 @@
 #include <proc.h>
 #include <assert.h>
 #include <default_sched.h>
-#include <stdio.h>
 
 #define USE_SKEW_HEAP 1
 
@@ -72,6 +71,7 @@ stride_enqueue(struct run_queue *rq, struct proc_struct *proc) {
       * (4) increase rq->proc_num
       */
     rq->lab6_run_pool = skew_heap_insert(rq->lab6_run_pool, &(proc->lab6_run_pool), proc_stride_comp_f);
+
     if (proc->time_slice == 0 || proc->time_slice > rq->max_time_slice) {
         proc->time_slice = rq->max_time_slice;
     }
@@ -117,7 +117,7 @@ static struct proc_struct *
 stride_pick_next(struct run_queue *rq) {
      /* LAB6: YOUR CODE 
       * (1) get a  proc_struct pointer p  with the minimum value of stride
-             (1.1) If using skew_heap, we can use le2proc get the p from rq->lab6_run_pol
+             (1.1) If using skew_heap, we can use le2proc get the p from rq->lab6_run_poll
              (1.2) If using list, we have to search list to find the p with minimum stride value
       * (2) update p;s stride value: p->lab6_stride
       * (3) return p
@@ -126,7 +126,7 @@ stride_pick_next(struct run_queue *rq) {
         return NULL;
     }
     struct proc_struct* proc = le2proc(rq->lab6_run_pool, lab6_run_pool);
-    proc->lab6_stride += BIG_STRIDE / proc->lab6_priority;
+    proc->lab6_stride += proc->lab6_priority ? BIG_STRIDE / proc->lab6_priority : BIG_STRIDE;
     return proc;
 }
 
