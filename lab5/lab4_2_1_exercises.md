@@ -38,7 +38,7 @@ proc_run用于将指定的进程切换到CPU上运行。它的大致执行步骤
 - 检查要切换的进程是否与当前正在运行的进程相同，如果相同则不需要切换。
 - 禁用中断。你可以使用`/kern/sync/sync.h`中定义好的宏`local_intr_save(x)`和`local_intr_restore(x)`来实现关、开中断。
 - 切换当前进程为要运行的进程。
-- 切换页表，以便使用新进程的地址空间。`/libs/riscv.h`中提供了`lcr3(unsigned int cr3)`函数，可实现修改CR3寄存器值的功能。
+- 切换页表，以便使用新进程的地址空间。`/libs/riscv.h`中提供了`lsatp(unsigned int pgdir)`函数，可实现修改SATP寄存器值的功能。
 - 实现上下文切换。`/kern/process`中已经预先编写好了`switch.S`，其中定义了`switch_to()`函数。可实现两个进程的context切换。
 - 允许中断。
 
