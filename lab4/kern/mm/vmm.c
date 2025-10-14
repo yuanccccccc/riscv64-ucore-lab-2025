@@ -6,7 +6,6 @@
 #include <error.h>
 #include <pmm.h>
 #include <riscv.h>
-#include <swap.h>
 #include <kmalloc.h>
 
 /*
@@ -74,11 +73,7 @@ mm_create(void)
         mm->mmap_cache = NULL;
         mm->pgdir = NULL;
         mm->map_count = 0;
-
-        if (swap_init_ok)
-            swap_init_mm(mm);
-        else
-            mm->sm_priv = NULL;
+        mm->sm_priv = NULL;
     }
     return mm;
 }
@@ -203,7 +198,7 @@ static void
 check_vmm(void)
 {
     check_vma_struct();
-    check_pgfault();
+    // check_pgfault();
 
     cprintf("check_vmm() succeeded.\n");
 }
@@ -271,150 +266,4 @@ check_vma_struct(void)
     mm_destroy(mm);
 
     cprintf("check_vma_struct() succeeded!\n");
-}
-
-struct mm_struct *check_mm_struct;
-
-// check_pgfault - check correctness of pgfault handler
-static void
-check_pgfault(void)
-{
-    size_t nr_free_pages_store = nr_free_pages();
-
-    check_mm_struct = mm_create();
-    assert(check_mm_struct != NULL);
-
-    struct mm_struct *mm = check_mm_struct;
-    pde_t *pgdir = mm->pgdir = boot_pgdir_va;
-    assert(pgdir[0] == 0);
-
-    struct vma_struct *vma = vma_create(0, PTSIZE, VM_WRITE);
-    assert(vma != NULL);
-
-    insert_vma_struct(mm, vma);
-
-    uintptr_t addr = 0x100;
-    assert(find_vma(mm, addr) == vma);
-
-    int i, sum = 0;
-    for (i = 0; i < 100; i++)
-    {
-        *(char *)(addr + i) = i;
-        sum += i;
-    }
-    for (i = 0; i < 100; i++)
-    {
-        sum -= *(char *)(addr + i);
-    }
-    assert(sum == 0);
-
-    pde_t *pd1 = pgdir, *pd0 = page2kva(pde2page(pgdir[0]));
-    page_remove(pgdir, ROUNDDOWN(addr, PGSIZE));
-    free_page(pde2page(pd0[0]));
-    free_page(pde2page(pd1[0]));
-    pgdir[0] = 0;
-    flush_tlb();
-
-    mm->pgdir = NULL;
-    mm_destroy(mm);
-    check_mm_struct = NULL;
-
-    assert(nr_free_pages_store == nr_free_pages());
-
-    cprintf("check_pgfault() succeeded!\n");
-}
-// page fault number
-volatile unsigned int pgfault_num = 0;
-
-/* do_pgfault - interrupt handler to process the page fault execption
- * @mm         : the control struct for a set of vma using the same PDT
- * @error_code : the error code recorded in trapframe->tf_err which is setted by x86 hardware
- * @addr       : the addr which causes a memory access exception, (the contents of the CR2 register)
- *
- * CALL GRAPH: trap--> trap_dispatch-->pgfault_handler-->do_pgfault
- * The processor provides ucore's do_pgfault function with two items of information to aid in diagnosing
- * the exception and recovering from it.
- *   (1) The contents of the CR2 register. The processor loads the CR2 register with the
- *       32-bit linear address that generated the exception. The do_pgfault fun can
- *       use this address to locate the corresponding page directory and page-table
- *       entries.
- *   (2) An error code on the kernel stack. The error code for a page fault has a format different from
- *       that for other exceptions. The error code tells the exception handler three things:
- *         -- The P flag   (bit 0) indicates whether the exception was due to a not-present page (0)
- *            or to either an access rights violation or the use of a reserved bit (1).
- *         -- The W/R flag (bit 1) indicates whether the memory access that caused the exception
- *            was a read (0) or write (1).
- *         -- The U/S flag (bit 2) indicates whether the processor was executing at user mode (1)
- *            or supervisor mode (0) at the time of the exception.
- */
-int do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr)
-{
-    int ret = -E_INVAL;
-    // try to find a vma which include addr
-    struct vma_struct *vma = find_vma(mm, addr);
-
-    pgfault_num++;
-    // If the addr is in the range of a mm's vma?
-    if (vma == NULL || vma->vm_start > addr)
-    {
-        cprintf("not valid addr %x, and  can not find it in vma\n", addr);
-        goto failed;
-    }
-
-    /* IF (write an existed addr ) OR
-     *    (write an non_existed addr && addr is writable) OR
-     *    (read  an non_existed addr && addr is readable)
-     * THEN
-     *    continue process
-     */
-    uint32_t perm = PTE_U;
-    if (vma->vm_flags & VM_WRITE)
-    {
-        perm |= READ_WRITE;
-    }
-    addr = ROUNDDOWN(addr, PGSIZE);
-
-    ret = -E_NO_MEM;
-
-    pte_t *ptep = NULL;
-
-    // try to find a pte, if pte's PT(Page Table) isn't existed, then create a PT.
-    // (notice the 3th parameter '1')
-    if ((ptep = get_pte(mm->pgdir, addr, 1)) == NULL)
-    {
-        cprintf("get_pte in do_pgfault failed\n");
-        goto failed;
-    }
-    if (*ptep == 0)
-    { // if the phy addr isn't exist, then alloc a page & map the phy addr with logical addr
-        if (pgdir_alloc_page(mm->pgdir, addr, perm) == NULL)
-        {
-            cprintf("pgdir_alloc_page in do_pgfault failed\n");
-            goto failed;
-        }
-    }
-    else
-    { // if this pte is a swap entry, then load data from disk to a page with phy addr
-      // and call page_insert to map the phy addr with logical addr
-        if (swap_init_ok)
-        {
-            struct Page *page = NULL;
-            if ((ret = swap_in(mm, addr, &page)) != 0)
-            {
-                cprintf("swap_in in do_pgfault failed\n");
-                goto failed;
-            }
-            page_insert(mm->pgdir, page, addr, perm);
-            swap_map_swappable(mm, addr, page, 1);
-            page->pra_vaddr = addr;
-        }
-        else
-        {
-            cprintf("no swap_init_ok but ptep is %x, failed\n", *ptep);
-            goto failed;
-        }
-    }
-    ret = 0;
-failed:
-    return ret;
 }
