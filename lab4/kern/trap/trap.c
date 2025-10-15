@@ -35,12 +35,6 @@ void idt_init(void)
     set_csr(sstatus, SSTATUS_SUM);
 }
 
-/* trap_in_kernel - test if trap happened in kernel */
-bool trap_in_kernel(struct trapframe *tf)
-{
-    return (tf->status & SSTATUS_SPP) != 0;
-}
-
 void print_trapframe(struct trapframe *tf)
 {
     cprintf("trapframe at %p\n", tf);
@@ -87,7 +81,6 @@ void print_regs(struct pushregs *gpr)
     cprintf("  t6       0x%08x\n", gpr->t6);
 }
 
-static volatile int in_swap_tick_event = 0;
 extern struct mm_struct *check_mm_struct;
 
 void interrupt_handler(struct trapframe *tf)
