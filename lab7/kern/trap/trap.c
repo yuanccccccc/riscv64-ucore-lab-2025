@@ -18,7 +18,7 @@
 #include <sbi.h>
 #include <proc.h>
 
-#define TICK_NUM 100 
+#define TICK_NUM 2
 
 static void print_ticks() {
     cprintf("%d ticks\n",TICK_NUM);
@@ -147,12 +147,8 @@ void interrupt_handler(struct trapframe *tf) {
             // directly.
             // clear_csr(sip, SIP_STIP);
             clock_set_next_event();
-            if (++ticks % TICK_NUM == 0 ) {
-                //print_ticks()
-            }
-            if (current){
-                sched_class_proc_tick(current); 
-            }
+            ++ticks;
+            run_timer_list();
             break;
         case IRQ_H_TIMER:
             cprintf("Hypervisor software interrupt\n");

@@ -421,8 +421,7 @@ do_pgfault(struct mm_struct *mm, uint_t error_code, uintptr_t addr) {
     ret = -E_NO_MEM;
 
     pte_t *ptep=NULL;
-
-    /* Maybe you want help comment, BELOW comments can help you finish the code
+/* Maybe you want help comment, BELOW comments can help you finish the code
     *
     * Some Useful MACROs and DEFINEs, you can use them in below implementation.
     * MACROs or Functions:
@@ -438,20 +437,19 @@ do_pgfault(struct mm_struct *mm, uint_t error_code, uintptr_t addr) {
     *   mm->pgdir : the PDT of these vma
     *
     */
-    // try to find a pte, if pte's PT(Page Table) isn't existed, then create a PT.
+ // try to find a pte, if pte's PT(Page Table) isn't existed, then create a PT.
     // (notice the 3th parameter '1')
     if ((ptep = get_pte(mm->pgdir, addr, 1)) == NULL) {
         cprintf("get_pte in do_pgfault failed\n");
         goto failed;
     }
-    
-    if (*ptep == 0) { // if the phy addr isn't exist, then alloc a page & map the phy addr with logical addr
+
+    if (*ptep == 0) {
         if (pgdir_alloc_page(mm->pgdir, addr, perm) == NULL) {
             cprintf("pgdir_alloc_page in do_pgfault failed\n");
             goto failed;
         }
-    }
-    else { // if this pte is a swap entry, then load data from disk to a page with phy addr
+    } else {// if this pte is a swap entry, then load data from disk to a page with phy addr
            // and call page_insert to map the phy addr with logical addr
         /*LAB3 EXERCISE 3: YOUR CODE
         * 请你根据以下信息提示，补充函数
@@ -476,10 +474,16 @@ do_pgfault(struct mm_struct *mm, uint_t error_code, uintptr_t addr) {
             //map of phy addr <--->
             //logical addr
             //(3) make the page swappable.
+            /*if ((ret = swap_in(mm, addr, &page)) != 0) {
+                cprintf("swap_in in do_pgfault failed\n");
+                goto failed;
+            }    
+            page_insert(mm->pgdir, page, addr, perm);
+            swap_map_swappable(mm, addr, page, 1);*/
+
             page->pra_vaddr = addr;
-        }
-        else {
-            cprintf("no swap_init_ok but ptep is %x, failed\n",*ptep);
+        } else {
+            cprintf("no swap_init_ok but ptep is %x, failed\n", *ptep);
             goto failed;
         }
    }
@@ -514,4 +518,26 @@ user_mem_check(struct mm_struct *mm, uintptr_t addr, size_t len, bool write) {
     }
     return KERN_ACCESS(addr, addr + len);
 }
-
+bool copy_string(struct mm_struct *mm, char *dst, const char *src,
+                 size_t maxn) {
+    size_t alen,
+   part = ROUNDDOWN((uintptr_t)src + PGSIZE, PGSIZE) - (uintptr_t)src;
+    while (1) {
+        if (part > maxn) {
+            part = maxn;
+        }
+        if (!user_mem_check(mm, (uintptr_t)src, part, 0)) {
+            return 0;
+        }
+        if ((alen = strnlen(src, part)) < part) {
+            memcpy(dst, src, alen + 1);
+            return 1;
+        }
+        if (part == maxn) {
+            return 0;
+        }
+        memcpy(dst, src, part);
+        dst += part, src += part, maxn -= part;
+        part = PGSIZE;
+    }
+}

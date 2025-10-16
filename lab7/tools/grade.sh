@@ -324,7 +324,6 @@ osimg=$(make_print ucoreimg)
 swapimg=$(make_print swapimg)
 
 ## set default qemu-options
-# qemuopts="-hda $osimg -drive file=$swapimg,media=disk,cache=writeback"
 qemuopts="-machine virt -nographic -bios default -device loader,file=bin/ucore.img,addr=0x80200000"
 
 ## set break-function, default is readline
@@ -360,18 +359,59 @@ default_check() {
 }
 
 ## check now!!
-run_test -prog 'priority'      -check default_check             \
-        'sched class: stride_scheduler'                         \
-        'kernel_execve: pid = 2, name = "priority".'            \
-        'main: fork ok,now need to wait pids.'                  \
-        'set priority to 5'                                     \
-        'set priority to 4'                                     \
-        'set priority to 3'                                     \
-        'set priority to 2'                                     \
-        'set priority to 1'                                     \
+run_test -prog 'matrix'      -check default_check             \
+        'Iter 1, No.0 philosopher_sema is thinking'                  \
+        'Iter 1, No.1 philosopher_sema is thinking'                  \
+        'Iter 1, No.2 philosopher_sema is thinking'                  \
+        'Iter 1, No.3 philosopher_sema is thinking'                  \
+        'Iter 1, No.4 philosopher_sema is thinking'                  \
+        'Iter 1, No.0 philosopher_sema is eating'                  \
+        'Iter 1, No.1 philosopher_sema is eating'                  \
+        'Iter 1, No.2 philosopher_sema is eating'                  \
+        'Iter 1, No.3 philosopher_sema is eating'                  \
+        'Iter 1, No.4 philosopher_sema is eating'                  \
+        'No.0 philosopher_sema quit'                                \
+        'No.1 philosopher_sema quit'                                \
+        'No.2 philosopher_sema quit'                                \
+        'No.3 philosopher_sema quit'                                \
+        'No.4 philosopher_sema quit'                                \
+        'Iter 1, No.0 philosopher_condvar is thinking'                  \
+        'Iter 1, No.1 philosopher_condvar is thinking'                  \
+        'Iter 1, No.2 philosopher_condvar is thinking'                  \
+        'Iter 1, No.3 philosopher_condvar is thinking'                  \
+        'Iter 1, No.4 philosopher_condvar is thinking'                  \
+        'Iter 1, No.0 philosopher_condvar is eating'                  \
+        'Iter 1, No.1 philosopher_condvar is eating'                  \
+        'Iter 1, No.2 philosopher_condvar is eating'                  \
+        'Iter 1, No.3 philosopher_condvar is eating'                  \
+        'Iter 1, No.4 philosopher_condvar is eating'                  \
+	'phi_test_condvar: state_condvar[0] will eating'              \
+	'phi_test_condvar: signal self_cv[0]'                         \
+        'phi_test_condvar: state_condvar[1] will eating'              \
+	'phi_test_condvar: signal self_cv[1]'                         \
+	'phi_test_condvar: state_condvar[2] will eating'              \
+	'phi_test_condvar: signal self_cv[2]'                         \
+        'phi_test_condvar: state_condvar[3] will eating'              \
+	'phi_test_condvar: signal self_cv[3]'                         \
+	'phi_test_condvar: state_condvar[4] will eating'              \
+	'phi_test_condvar: signal self_cv[4]'                         \
+      - 'cond_signal begin: cvp.*, cvp->count.*, cvp->owner->next_count.*'  \
+      - 'cond_signal end: cvp.*, cvp->count.*, cvp->owner->next_count.*'    \
+      - 'cond_wait begin:  cvp.*, cvp->count.*, cvp->owner->next_count.*'   \
+      - 'cond_wait end:  cvp.*, cvp->count.*, cvp->owner->next_count.*'     \
+        'No.0 philosopher_condvar quit'                                \
+        'No.1 philosopher_condvar quit'                                \
+        'No.2 philosopher_condvar quit'                                \
+        'No.3 philosopher_condvar quit'                                \
+        'No.4 philosopher_condvar quit'                                \
+      - 'kernel_execve: pid = ., name = "matrix".*'              \
+        'fork ok.'                                              \
+        'pid 13 done!.'                                         \
+        'pid 17 done!.'                                         \
+        'pid 23 done!.'                                         \
+        'matrix pass.'                                          \
         'all user-mode processes have quit.'                    \
         'init check memory pass.'                               \
-    ! - 'user panic at .*'
 
 ## print final-score
 show_final

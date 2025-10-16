@@ -6,6 +6,7 @@
 #include <sched.h>
 #include <riscv.h>
 #include <assert.h>
+#include <atomic.h>
 
 static inline bool __intr_save(void) {
     if (read_csr(sstatus) & SSTATUS_SIE) {

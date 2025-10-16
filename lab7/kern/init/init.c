@@ -16,6 +16,7 @@
 
 int kern_init(void) __attribute__((noreturn));
 void grade_backtrace(void);
+static void lab1_switch_test(void);
 
 int
 kern_init(void) {
@@ -48,7 +49,7 @@ kern_init(void) {
     //LAB1: CAHLLENGE 1 If you try to do it, uncomment lab1_switch_test()
     // user/kernel mode switch test
     //lab1_switch_test();
-    
+        
     cpu_idle();                 // run idle process
 }
 
@@ -76,5 +77,26 @@ static void
 lab1_print_cur_status(void) {
     static int round = 0;
     round ++;
+}
+
+static void
+lab1_switch_to_user(void) {
+    //LAB1 CHALLENGE 1 : TODO
+}
+
+static void
+lab1_switch_to_kernel(void) {
+    //LAB1 CHALLENGE 1 :  TODO
+}
+
+static void
+lab1_switch_test(void) {
+    lab1_print_cur_status();
+    cprintf("+++ switch to  user  mode +++\n");
+    lab1_switch_to_user();
+    lab1_print_cur_status();
+    cprintf("+++ switch to kernel mode +++\n");
+    lab1_switch_to_kernel();
+    lab1_print_cur_status();
 }
 
