@@ -18,158 +18,59 @@
 - 控制转交给相应中断处理代码进行处理
 - 返回正在运行的程序
 
-##### **中断分类**
+##### 中断分类
 
-异常(Exception)，指在执行一条指令的过程中发生了错误，此时我们通过中断来处理错误。最常见的异常包括：访问无效内存地址、执行非法指令(除零)、发生缺页等。他们有的可以恢复(如缺页)，有的不可恢复(如除零)，只能终止程序执行。
+**异常**(Exception)，指在执行一条指令的过程中发生了错误，此时我们通过中断来处理错误。最常见的异常包括：访问无效内存地址、执行非法指令(除零)、发生缺页等。他们有的可以恢复(如缺页)，有的不可恢复(如除零)，只能终止程序执行。
 
-陷入(Trap)，指我们主动通过一条指令停下来，并跳转到处理函数。常见的形式有通过ecall进行系统调用(syscall)，或通过ebreak进入断点(breakpoint)。
+**陷入**(Trap)，指我们主动通过一条指令停下来，并跳转到处理函数。常见的形式有通过ecall进行系统调用(syscall)，或通过ebreak进入断点(breakpoint)。
 
-外部中断(Interrupt)，简称中断，指的是 CPU 的执行过程被外设发来的信号打断，此时我们必须先停下来对该外设进行处理。典型的有定时器倒计时结束、串口收到数据等。
-
-外部中断是异步(asynchronous)的，CPU 并不知道外部中断将何时发生。CPU 也并不需要一直在原地等着外部中断的发生，而是执行代码，有了外部中断才去处理。我们知道，CPU 的主频远高于 I/O 设备，这样避免了 CPU 资源的浪费。
+**外部中断**(Interrupt)，简称中断，指的是 CPU 的执行过程被外设发来的信号打断，此时我们必须先停下来对该外设进行处理。典型的有定时器倒计时结束、串口收到数据等。外部中断是异步(asynchronous)的，CPU 并不知道外部中断将何时发生。CPU 也并不需要一直在原地等着外部中断的发生，而是执行代码，有了外部中断才去处理。我们知道，CPU 的主频远高于 I/O 设备，这样避免了 CPU 资源的浪费。
 
 由于中断处理需要进行较高权限的操作，中断处理程序一般处于**内核态**，或者说，处于“比被打断的程序更高的特权级”。注意，在RISCV里，中断(interrupt)和异常(exception)统称为"trap"。
 
-> 扩展
->
-> The RISC-V Instruction Set Manual Volume I: Unprivileged ISA （Document Version 20191213） 
->
-> 1.6
->
-> We use the term **exception** to refer to an unusual condition occurring at run time associated with an instruction in the current RISC-V hart. 
->
-> We use the term **interrupt** to refer to an external asynchronous event that may cause a RISC-V hart to experience an unexpected transfer of control.
-> We use the term **trap** to refer to the transfer of control to a trap handler caused by either an
-> exception or an interrupt.
-
-<!-- ####  riscv64 权限模式
-
-#####   riscv64 的 M Mode
-
-M-mode(机器模式，缩写为 M 模式)是 RISC-V 中 hart(hardware thread,硬件线程)可以执行的最高权限模式。在 M 模式下运行的 hart 对内存,I/O 和一些对于启动和配置系统来说必要的底层功能有着完全的使用权。默认情况下,发生所有异常(不论在什么权限模式下)的时候,控制权都会被移交到 M 模式的异常处理程序。它是唯一所有标准 RISC-V 处理器都必须实现的权限模式。
-
-#####  riscv64 的 S Mode
-
-S-mode(监管者模式，缩写为 S 模式)是支持现代类 Unix 操作系统的权限模式，支持基于页面的虚拟内存机制是其核心。 Unix 系统中的大多数exception都应该进行 S 模式下的系统调用。M 模式的异常处理程序可以将异常重新导向 S 模式，也支持通过异常委托机制（Machine Interrupt Delegation,机器中断委托）选择性地将中断和同步异常直接交给 S 模式处理,而完全绕过 M 模式。 -->
-
 #### riscv64 权限模式
 
-在现代处理器中，系统通常会区分 **用户态（User Mode）** 和 **特权态（Supervisor/Kernel Mode）**。用户态运行应用程序，权限有限，不能直接访问硬件和关键寄存器。特权态运行操作系统内核，可以控制硬件、管理内存和调度任务。这种分层的目的，是保证系统的安全与稳定：用户程序即使出现错误，也不会直接破坏底层系统。中断与异常机制负责完成这两种模式之间的切换。例如，当用户态程序发起系统调用，或出现异常/中断时，处理器会切换到特权态，交由内核代码进行处理，处理完成后再返回用户态继续执行。
+我们在lab1中简单的提及过特权级，现在我们具体介绍RISC-V 的三个特权级。在现代处理器中，系统通常会区分 **用户态（User Mode）** 和 **特权态（Supervisor/Kernel Mode）**。用户态运行应用程序，权限有限，不能直接访问硬件和关键寄存器。特权态运行操作系统内核，可以控制硬件、管理内存和调度任务。这种分层的目的，是保证系统的安全与稳定：用户程序即使出现错误，也不会直接破坏底层系统。中断与异常机制负责完成这两种模式之间的切换。例如，当用户态程序发起系统调用，或出现异常/中断时，处理器会切换到特权态，交由内核代码进行处理，处理完成后再返回用户态继续执行。
 
-##### riscv64 的 S Mode
+##### RISC-V 的三个特权级
 
-S-mode（监管者模式，缩写为 S 模式）是 RISC-V 中支持现代类 Unix 操作系统的权限模式。它的核心是基于页面的虚拟内存机制，使得多任务和内存隔离成为可能。在 Unix 系统中，大多数异常会通过系统调用的形式在 S 模式下得到处理。M 模式的异常处理程序也可以通过异常委托机制（Machine Interrupt Delegation）选择性地将中断和同步异常直接交给 S 模式处理，从而绕过 M 模式。
+**M 模式（Machine Mode）**：是 RISC-V 中最高的特权级。在 M 模式下，hart（硬件线程）对内存、I/O 和底层功能有完全的控制权。默认情况下，所有的中断和异常都会首先进入 M 模式处理。M 模式是所有标准 RISC-V 处理器必须实现的特权级，通常用于处理器启动、底层固件（如 OpenSBI）的执行。
+**S 模式（Supervisor Mode）**：是支持现代类 Unix 操作系统的特权级。操作系统内核运行在 S 模式，它支持基于页面的虚拟内存机制，使得多任务和内存隔离成为可能。在 Unix 系统中，大多数系统调用和异常都在 S 模式下处理。
+**U 模式（User Mode）**：是最低的特权级。用户程序运行在 U 模式，只能执行普通指令，不能直接访问硬件或执行特权操作。当用户程序需要操作系统服务时，必须通过系统调用（ecall 指令）陷入到 S 模式。
 
-> ​	扩展
->
-> M-mode（机器模式，缩写为 M 模式）是 RISC-V 特有的最高权限模式。它通常用于处理器的启动与底层配置，默认情况下所有异常都会先进入 M 模式，然后再根据配置决定是否交给 S 模式处理。M 模式是所有标准 RISC-V 处理器必须实现的，但在常规操作系统运行时，它主要作为底层固件环境（OpenSBI 等）的执行场所，不直接运行操作系统内核。
+在我们的操作系统实验中，主要关注 S 模式和 U 模式之间的切换。M 模式作为底层固件环境存在，负责将中断委托给 S 模式处理。
 
 #### 中断委托与响应机制
 
-##### 中断的默认行为
 
-在 RISC-V 中，**默认情况下所有的中断和异常都会陷入到 M 模式**。这意味着无论中断发生在哪个特权级（M/S/U），处理器都会先跳转到 M 模式的中断处理程序。但是，让每个中断都经过 M 模式会带来额外的开销，而且大多数操作系统相关的中断（如系统调用、时钟中断、缺页异常）应该由运行在 S 模式的内核直接处理。
 
-##### 中断委托机制
 
-为了提高效率，RISC-V 提供了**中断委托（Interrupt Delegation）**机制。通过配置 M 模式的委托寄存器，可以将特定的中断和异常直接委托给 S 模式处理，完全绕过 M 模式：
 
-**mideleg（Machine Interrupt Delegation Register）**：机器中断委托寄存器。该寄存器的每一位对应一种中断类型。如果某一位被设置为 1，则对应的中断会被委托给 S 模式处理。例如，可以将时钟中断、软件中断等委托给 S 模式。
 
-**medeleg（Machine Exception Delegation Register）**：机器异常委托寄存器。该寄存器的每一位对应一种异常类型。如果某一位被设置为 1，则对应的异常会被委托给 S 模式处理。例如，可以将 ecall-from-u-mode、缺页异常等委托给 S 模式。
 
-通过在启动时由 OpenSBI 等固件正确配置这两个寄存器，我们可以实现：**在 U 模式下发生的中断和异常直接陷入到 S 模式，由操作系统内核处理**。
 
-##### 不同特权级下的中断响应
 
-配置好中断委托后，中断的响应规则如下：
-
-**U 模式下发生中断/异常**：如果该中断/异常已被委托给 S 模式（在 mideleg/medeleg 中对应位为 1），则直接陷入 S 模式；否则陷入 M 模式。在我们的实验中，所有需要内核处理的中断都会被委托，因此 U 模式的中断会直接进入 S 模式。
-
-**S 模式下发生中断/异常**：如果 S 模式下的中断使能（sstatus.SIE）被关闭，则中断不会被响应，会被挂起直到中断使能打开。如果中断使能打开，则会陷入 S 模式自身的中断处理程序（如果该中断未被委托给 S 模式，则会陷入 M 模式，但这种情况在我们的配置中不会发生）。
-
-**M 模式下发生中断/异常**：总是在 M 模式处理。但在我们的操作系统中，不会直接运行在 M 模式，因此不需要考虑这种情况。
-
-##### 内核态屏蔽中断的设计
-
-在实际的操作系统设计中，为了简化处理逻辑和保证内核数据结构的一致性，我们通常会**在 S 模式（内核态）下屏蔽中断**。这意味着当处理器运行在 S 模式时，不会响应任何中断，中断会被挂起直到返回到 U 模式。
-
-实现这一点很简单：在进入 S 模式时，硬件会自动将 `sstatus.SIE` 位清零，从而禁用 S 模式下的中断。在从 S 模式返回到 U 模式时（执行 sret 指令），硬件会自动恢复 `sstatus.SIE` 的值。这样，所有的中断都只会在 U 模式下发生，陷入 S 模式后进行处理，处理完毕返回 U 模式后才会响应下一个中断。
-
-这种设计的好处是：
-- 简化了内核代码，不需要考虑在内核执行过程中被中断打断的情况
-- 避免了复杂的可重入性问题
-- 保证了内核临界区的原子性
-
-#### 寄存器
+#### 中断机制中使用的寄存器
 
 除了32个通用寄存器之外，RISCV架构还有大量的 **控制状态寄存器** **Control and Status Registers**(CSRs)。其中有几个重要的寄存器和中断机制有关。
 
 有些时候，禁止CPU产生中断很有用。（就像你在做重要的事情，如操作系统lab的时候，并不想被打断）。所以，`sstatus`寄存器(Supervisor Status Register)里面有一个二进制位`SIE`(supervisor interrupt enable，在RISCV标准里是2^1 对应的二进制位)，数值为0的时候，如果当程序在S态运行，将禁用全部中断。（对于在U态运行的程序，SIE这个二进制位的数值没有任何意义），`sstatus`还有一个二进制位`UIE`(user interrupt enable)可以在置零的时候禁止用户态程序产生中断。
 
+实际上，`sstatus`寄存器中还包含多个重要的控制位，比如`SPIE`（Supervisor Previous Interrupt Enable） 会记录进入 S 模式之前的 SIE 值。当通过 trap 进入 S 模式时，硬件会将 SPIE 设置为 SIE 的旧值，然后将 SIE 清零。在从 S 模式返回时，硬件会将 SIE 恢复为 SPIE 的值，然后将 SPIE 设置为 1。再比如`SPP`（Supervisor Previous Privilege）会记录进入 S 模式之前的特权级。0 表示来自 U 模式，1 表示来自 S 模式。从 S 模式返回时会根据 SPP 的值决定返回到哪个特权级。
+
+除了`sstatus`寄存器中的`SIE`控制位，还存在一个`sie`寄存器，即使 sstatus.SIE 为 1，也可以通过 `sie` 寄存器屏蔽特定类型的中断。例如，可以只允许时钟中断，而屏蔽软件中断。
+
 在中断产生后，应该有个**中断处理程序**来处理中断。CPU怎么知道中断处理程序在哪？实际上，RISCV架构有个CSR叫做`stvec`(Supervisor Trap Vector Base Address Register)，即所谓的”中断向量表基址”。中断向量表的作用就是把不同种类的中断映射到对应的中断处理程序。如果只有一个中断处理程序，那么可以让`stvec`直接指向那个中断处理程序的地址。
 
 对于RISCV架构，`stvec`会把最低位的两个二进制位用来编码一个“模式”，如果是“00”就说明更高的SXLEN-2个二进制位存储的是唯一的中断处理程序的地址(SXLEN是`stval`寄存器的位数)，如果是“01”说明更高的SXLEN-2个二进制位存储的是中断向量表基址，通过不同的异常原因来索引中断向量表。但是怎样用62个二进制位编码一个64位的地址？RISCV架构要求这个地址是四字节对齐的，总是在较高的62位后补两个0。
 
-> ​	扩展
->
-> 在旧版本的RISCV privileged ISA标准中（1.9.1及以前），RISCV不支持中断向量表，用最后两位数编码一个模式是1.10版本加入的。可以思考一下这个改动如何保证了后向兼容。[历史版本的ISA手册](https://github.com/riscv/riscv-isa-manual/releases/tag/archive)
->
-> 1.9.1版本的RISCV privileged architecture手册：
->
-> 4.1.3 Supervisor Trap Vector Base Address Register (stvec) The stvec register is an XLEN-bit read/write register that holds the base address of the S-mode trap vector. When an exception occurs, the pc is set to stvec. The stvec register is always aligned to a 4-byte boundary
-
 当我们触发中断进入 S 态进行处理时，以下寄存器会被硬件自动设置，将一些信息提供给中断处理程序：
 
-**sepc**(supervisor exception program counter)，它会记录触发中断的那条指令的地址；
+`sepc`(supervisor exception program counter)，当 trap 进入 S 模式时，sepc 会被硬件自动设置为触发中断的指令的地址（对于中断）或触发异常的指令的地址（对于异常）。在中断处理完成后，执行 sret 指令会将 pc 设置为 sepc 的值，从而返回到被中断的位置继续执行。
 
-**scause**，它会记录中断发生的原因，还会记录该中断是不是一个外部中断；
+`scause`，当 trap 进入 S 模式时，scause 会被硬件自动设置为一个值，指示中断或异常的原因。scause 的最高位表示是中断（1）还是异常（0），低位表示具体的中断或异常类型编号。
 
-**stval**，它会记录一些中断处理所需要的辅助信息，比如指令获取(instruction fetch)、访存、缺页异常，它会把发生问题的目标地址或者出错的指令记录下来，这样我们在中断处理程序中就知道处理目标了。
-
-> 扩展
->
-> The RISC-V Instruction Set Manual Volume II: Privileged Architecture 
->
-> （Document Version 20190608-Priv-MSU-Ratified）
->
-> 4.1.1 Supervisor Status Register (sstatus)
->
-> The SIE bit enables or disables all interrupts in supervisor mode. When SIE is clear, interrupts
-> are not taken while in supervisor mode. When the hart is running in user-mode, the value in
-> SIE is ignored, and supervisor-level interrupts are enabled. The supervisor can disable individual
-> interrupt sources using the sie CSR.
-> The SPIE bit indicates whether supervisor interrupts were enabled prior to trapping into supervisor
-> mode. When a trap is taken into supervisor mode, SPIE is set to SIE, and SIE is set to 0. When
-> an SRET instruction is executed, SIE is set to SPIE, then SPIE is set to 1.
-> The UIE bit enables or disables user-mode interrupts. User-level interrupts are enabled only if UIE
-> is set and the hart is running in user-mode. The UPIE bit indicates whether user-level interrupts
-> were enabled prior to taking a user-level trap. When a URET instruction is executed, UIE is set
-> to UPIE, and UPIE is set to 1. User-level interrupts are optional. If omitted, the UIE and UPIE
-> bits are hardwired to zero.
->
-> 4.1.9 Supervisor Exception Program Counter (sepc)
->
-> When a trap is taken into S-mode, sepc is written with the virtual address of the instruction
-> that was interrupted or that encountered the exception. Otherwise, sepc is never written by the
-> implementation, though it may be explicitly written by software.
->
-> 4.1.10 Supervisor Cause Register (scause)
->
-> When a trap is taken into S-mode, scause is written with a code indicating the event that caused the trap. Otherwise, scause is never written by the implementation, though it may be explicitly written by
-> software.
->
-> 4.1.11 Supervisor Trap Value (stval) Register
->
-> When a trap is taken into S-mode, stval is written with exception-specific information to assist software
-> in handling the trap. Otherwise, stval is never written by the implementation, though it may
-> be explicitly written by software. The hardware platform will specify which exceptions must set
-> stval informatively and which may unconditionally set it to zero.
-> When a hardware breakpoint is triggered, or an instruction-fetch, load, or store address-misaligned,
-> access, or page-fault exception occurs, stval is written with the faulting virtual address. On an
-> illegal instruction trap, stval may be written with the first XLEN or ILEN bits of the faulting
-> instruction as described below. For other exceptions, stval is set to zero, but a future standard
-> may redefine stval’s setting for other exceptions.
+`stval`，当 trap 进入 S 模式时，stval 会被硬件自动设置为与异常相关的辅助信息。例如，对于缺页异常，stval 存储引发异常的虚拟地址；对于非法指令异常，stval 可能存储该指令的内容。对于其他类型的异常，stval 可能被设置为 0。
 
 #### 特权指令
 
@@ -182,4 +83,17 @@ RISCV支持以下和中断相关的特权指令：
 **ebreak**(environment break)，执行这条指令会触发一个断点中断从而进入中断处理流程。
 
 **mret**，用于 M 态中断返回到 S 态或 U 态，实际作用为pc←mepc，回顾**sepc**定义，返回到通过中断进入 M 态之前的地址。（一般不用涉及）
+
+#### 从 U 模式陷入 S 模式的完整流程
+
+我们最常接触到的便是 U 模型陷入到 S 模式。当一个用户程序运行在 U 模式时，它通常在执行过程中有可能因为某些原因陷入 S 模式。运行在 U 模式的程序如果需要向操作系统请求服务，它会通过执行 ecall 指令发起系统调用，主动将控制权交给内核。同时，定时器也会在指定时间触发时钟中断，这会导致操作系统对当前进程进行时间片轮转调度，决定是否切换进程。另外如果程序发生了异常，比如访问非法内存地址、发生缺页等，系统也会转入内核进行处理。这些事件都触发了硬件的自动处理流程，将程序的运行状态从用户模式转入内核模式。
+
+首先，它会保存中断发生时的 PC 值，即程序计数器的值，这个值会被保存在 sepc 寄存器中。对于异常来说，这通常是触发异常的指令地址，而对于中断来说，则是被打断的指令地址。然后，硬件会记录中断或异常的类型，并将其写入 scause 寄存器。这里的 scause 会告诉系统是中断还是异常，且会给出具体的中断类型。
+
+接下来，硬件会保存相关的辅助信息。如果异常与缺页或访问错误相关，硬件会将相关的地址或数据保存到 stval 寄存器，以便中断处理程序在后续处理中使用。紧接着，硬件会保存并修改中断使能状态。它会将当前的中断使能状态 sstatus.SIE 保存到 sstatus.SPIE 中，并且会将 sstatus.SIE 清零，从而禁用 S 模式下的中断。这是为了保证在处理中断时不会被其他中断打断。
+
+然后，硬件会保存当前的特权级信息。它将当前特权级（即 U 模式，值为 0）保存到 sstatus.SPP 中，并将当前特权级切换到 S 模式。此时，处理器已经进入内核模式，准备跳转到中断处理程序。硬件会将 pc 设置为 stvec 寄存器中的值，并跳转到中断处理程序的入口。
+
+进入中断处理程序后，操作系统会执行一系列处理步骤，下面我们就去看看在做些什么。
+
 
