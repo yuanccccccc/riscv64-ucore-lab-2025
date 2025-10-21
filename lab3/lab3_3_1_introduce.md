@@ -28,18 +28,6 @@
 
 由于中断处理需要进行较高权限的操作，中断处理程序一般处于**内核态**，或者说，处于“比被打断的程序更高的特权级”。注意，在RISCV里，中断(interrupt)和异常(exception)统称为"trap"。
 
-> 扩展
->
-> The RISC-V Instruction Set Manual Volume I: Unprivileged ISA （Document Version 20191213） 
->
-> 1.6
->
-> We use the term **exception** to refer to an unusual condition occurring at run time associated with an instruction in the current RISC-V hart. 
->
-> We use the term **interrupt** to refer to an external asynchronous event that may cause a RISC-V hart to experience an unexpected transfer of control.
-> We use the term **trap** to refer to the transfer of control to a trap handler caused by either an
-> exception or an interrupt.
-
 #### riscv64 权限模式
 
 我们在lab1中简单的提及过特权级，现在我们具体介绍RISC-V 的三个特权级。在现代处理器中，系统通常会区分 **用户态（User Mode）** 和 **特权态（Supervisor/Kernel Mode）**。用户态运行应用程序，权限有限，不能直接访问硬件和关键寄存器。特权态运行操作系统内核，可以控制硬件、管理内存和调度任务。这种分层的目的，是保证系统的安全与稳定：用户程序即使出现错误，也不会直接破坏底层系统。中断与异常机制负责完成这两种模式之间的切换。例如，当用户态程序发起系统调用，或出现异常/中断时，处理器会切换到特权态，交由内核代码进行处理，处理完成后再返回用户态继续执行。
