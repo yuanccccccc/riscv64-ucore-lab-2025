@@ -109,11 +109,8 @@ void interrupt_handler(struct trapframe *tf)
         // In fact, Call sbi_set_timer will clear STIP, or you can clear it
         // directly.
         // clear_csr(sip, SIP_STIP);
-        clock_set_next_event();
-        if (++ticks % TICK_NUM == 0)
-        {
-            print_ticks();
-        }
+
+        /*LAB3 请补充你在lab3中的代码 */ 
         break;
     case IRQ_H_TIMER:
         cprintf("Hypervisor software interrupt\n");
