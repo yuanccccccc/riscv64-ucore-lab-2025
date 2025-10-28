@@ -51,6 +51,7 @@ proc_run用于将指定的进程切换到CPU上运行。它的大致执行步骤
 
 
 #### 扩展练习 Challenge：
+
 1. 说明语句`local_intr_save(intr_flag);....local_intr_restore(intr_flag);`是如何实现开关中断的？
 
 2. 深入理解不同分页模式的工作原理（思考题）

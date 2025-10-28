@@ -8,7 +8,7 @@
 
 随后，调用alloc\_proc函数来通过kmalloc函数获得proc\_struct结构的一块内存块-，作为第0个进程控制块。并把proc进行初步初始化（即把proc\_struct中的各个成员变量清零）。但有些成员变量设置了特殊的值，比如：
 
-```
+```c
  proc->state = PROC_UNINIT;  设置进程为“初始”态
  proc->pid = -1;             设置进程pid的未初始化值
  proc->pgdir = boot_pgdir;       使用内核页目录表的基址
