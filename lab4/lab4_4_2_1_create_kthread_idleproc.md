@@ -22,7 +22,7 @@
 
 接下来，proc\_init函数对idleproc内核线程进行进一步初始化：
 
-```
+```c
 idleproc->pid = 0;
 idleproc->state = PROC_RUNNABLE;
 idleproc->kstack = (uintptr_t)bootstack;

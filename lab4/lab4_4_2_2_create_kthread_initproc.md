@@ -10,7 +10,7 @@
 
 下面我们来分析一下创建内核线程的函数kernel\_thread：
 
-```
+```c
 int kernel_thread(int (*fn)(void *), void *arg, uint32_t clone_flags) {
     // 对trameframe，也就是我们程序的一些上下文进行一些初始化
     struct trapframe tf;
