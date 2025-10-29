@@ -36,7 +36,6 @@
 
 static void check_vmm(void);
 static void check_vma_struct(void);
-// static void check_pgfault(void);
 
 // mm_create -  alloc a mm_struct & initialize it.
 struct mm_struct *

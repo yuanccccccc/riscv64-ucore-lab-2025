@@ -11,10 +11,11 @@ struct proc_struct;
 
 struct run_queue;
 
-// The introduction of scheduling classes is borrrowed from Linux, and makes the 
-// core scheduler quite extensible. These classes (the scheduler modules) encapsulate 
-// the scheduling policies. 
-struct sched_class {
+// The introduction of scheduling classes is borrrowed from Linux, and makes the
+// core scheduler quite extensible. These classes (the scheduler modules) encapsulate
+// the scheduling policies.
+struct sched_class
+{
     // the name of sched_class
     const char *name;
     // Init the run queue
@@ -36,7 +37,8 @@ struct sched_class {
      */
 };
 
-struct run_queue {
+struct run_queue
+{
     list_entry_t run_list;
     unsigned int proc_num;
     int max_time_slice;
@@ -49,4 +51,3 @@ void wakeup_proc(struct proc_struct *proc);
 void schedule(void);
 void sched_class_proc_tick(struct proc_struct *proc);
 #endif /* !__KERN_SCHEDULE_SCHED_H__ */
-
