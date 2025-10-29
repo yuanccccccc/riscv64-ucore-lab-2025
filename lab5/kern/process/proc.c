@@ -101,7 +101,7 @@ alloc_proc(void)
          *       struct mm_struct *mm;                       // Process's memory management field
          *       struct context context;                     // Switch here to run process
          *       struct trapframe *tf;                       // Trap frame for current interrupt
-         *       uintptr_t cr3;                              // CR3 register: the base addr of Page Directroy Table(PDT)
+         *       uintptr_t pgdir;                            // the base addr of Page Directroy Table(PDT)
          *       uint32_t flags;                             // Process flag
          *       char name[PROC_NAME_LEN + 1];               // Process name
          */
@@ -122,7 +122,7 @@ alloc_proc(void)
         proc->mm = NULL;
         memset(&(proc->context), 0, sizeof(struct context));
         proc->tf = NULL;
-        proc->cr3 = boot_cr3;
+        proc->pgdir = boot_pgdir_pa;
         proc->flags = 0;
         memset(proc->name, 0, PROC_NAME_LEN);
         // lab5 add:
@@ -238,7 +238,7 @@ void proc_run(struct proc_struct *proc)
          * MACROs or Functions:
          *   local_intr_save():        Disable interrupts
          *   local_intr_restore():     Enable Interrupts
-         *   lcr3():                   Modify the value of CR3 register
+         *   lsatp():                   Modify the value of satp register
          *   switch_to():              Context switching between two processes
          */
 
@@ -247,7 +247,7 @@ void proc_run(struct proc_struct *proc)
         local_intr_save(intr_flag);
         {
             current = proc;
-            lcr3(next->cr3);
+            lsatp(next->pgdir);
             switch_to(&(prev->context), &(next->context));
         }
         local_intr_restore(intr_flag);
@@ -340,7 +340,7 @@ setup_pgdir(struct mm_struct *mm)
         return -E_NO_MEM;
     }
     pde_t *pgdir = page2kva(page);
-    memcpy(pgdir, boot_pgdir, PGSIZE);
+    memcpy(pgdir, boot_pgdir_va, PGSIZE);
 
     mm->pgdir = pgdir;
     return 0;
@@ -393,7 +393,7 @@ copy_mm(uint32_t clone_flags, struct proc_struct *proc)
 good_mm:
     mm_count_inc(mm);
     proc->mm = mm;
-    proc->cr3 = PADDR(mm->pgdir);
+    proc->pgdir = PADDR(mm->pgdir);
     return 0;
 bad_dup_cleanup_mmap:
     exit_mmap(mm);
@@ -525,7 +525,7 @@ int do_exit(int error_code)
     struct mm_struct *mm = current->mm;
     if (mm != NULL)
     {
-        lcr3(boot_cr3);
+        lsatp(boot_pgdir_pa);
         if (mm_count_dec(mm) == 0)
         {
             exit_mmap(mm);
@@ -713,11 +713,11 @@ load_icode(unsigned char *binary, size_t size)
     assert(pgdir_alloc_page(mm->pgdir, USTACKTOP - 3 * PGSIZE, PTE_USER) != NULL);
     assert(pgdir_alloc_page(mm->pgdir, USTACKTOP - 4 * PGSIZE, PTE_USER) != NULL);
 
-    //(5) set current process's mm, sr3, and set CR3 reg = physical addr of Page Directory
+    //(5) set current process's mm, sr3, and set satp reg = physical addr of Page Directory
     mm_count_inc(mm);
     current->mm = mm;
-    current->cr3 = PADDR(mm->pgdir);
-    lcr3(PADDR(mm->pgdir));
+    current->pgdir = PADDR(mm->pgdir);
+    lsatp(PADDR(mm->pgdir));
 
     //(6) setup trapframe for user environment
     struct trapframe *tf = current->tf;
@@ -771,7 +771,7 @@ int do_execve(const char *name, size_t len, unsigned char *binary, size_t size)
     if (mm != NULL)
     {
         cputs("mm != NULL");
-        lcr3(boot_cr3);
+        lsatp(boot_pgdir_pa);
         if (mm_count_dec(mm) == 0)
         {
             exit_mmap(mm);

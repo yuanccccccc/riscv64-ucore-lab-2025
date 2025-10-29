@@ -24,9 +24,9 @@ struct pmm_manager
 };
 
 extern const struct pmm_manager *pmm_manager;
-extern pde_t *boot_pgdir;
+extern pde_t *boot_pgdir_va;
 extern const size_t nbase;
-extern uintptr_t boot_cr3;
+extern uintptr_t boot_pgdir_pa;
 
 void pmm_init(void);
 
