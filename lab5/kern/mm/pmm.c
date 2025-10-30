@@ -6,6 +6,7 @@
 #include <mmu.h>
 #include <pmm.h>
 #include <sbi.h>
+#include <dtb.h>
 #include <stdio.h>
 #include <string.h>
 #include <sync.h>
@@ -91,11 +92,14 @@ static void page_init(void)
 {
     extern char kern_entry[];
 
-    va_pa_offset = KERNBASE - 0x80200000;
+    va_pa_offset = PHYSICAL_MEMORY_OFFSET;
 
-    uint_t mem_begin = KERNEL_BEGIN_PADDR;
-    uint_t mem_size = PHYSICAL_MEMORY_END - KERNEL_BEGIN_PADDR;
-    uint_t mem_end = PHYSICAL_MEMORY_END;
+    uint64_t mem_begin = get_memory_base();
+    uint64_t mem_size  = get_memory_size();
+    if (mem_size == 0) {
+        panic("DTB memory info not available");
+    }
+    uint64_t mem_end   = mem_begin + mem_size;
 
     cprintf("physcial memory map:\n");
     cprintf("  memory: 0x%08lx, [0x%08lx, 0x%08lx].\n", mem_size, mem_begin,
