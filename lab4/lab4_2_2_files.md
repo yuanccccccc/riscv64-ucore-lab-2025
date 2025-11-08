@@ -54,7 +54,6 @@
 │       ├── trap.c
 │       ├── trap.h
 │       └── trapentry.S
-├── lab4.md
 ├── libs
 │   ├── atomic.h
 │   ├── defs.h
