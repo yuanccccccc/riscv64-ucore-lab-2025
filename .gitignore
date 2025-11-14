@@ -2,3 +2,8 @@
 */obj/*
 */.gdb.in
 */.qemu.out
+*/.log
+
+lab5/.badsegment.log
+lab5/.divzero.log
+lab5/.softint.log
