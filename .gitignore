@@ -2,3 +2,4 @@
 */bin/*
 */.gdb.in
 */.qemu.out
+*.log
