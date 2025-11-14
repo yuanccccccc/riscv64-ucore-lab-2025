@@ -11,6 +11,7 @@
 #include <vmm.h>
 #include <proc.h>
 #include <kmonitor.h>
+#include <dtb.h>
 
 int kern_init(void) __attribute__((noreturn));
 void grade_backtrace(void);
@@ -19,6 +20,7 @@ int kern_init(void)
 {
     extern char edata[], end[];
     memset(edata, 0, end - edata);
+    dtb_init();
     cons_init(); // init the console
 
     const char *message = "(THU.CST) os is loading ...";

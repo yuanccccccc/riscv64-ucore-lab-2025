@@ -6,6 +6,7 @@
 #include <mmu.h>
 #include <pmm.h>
 #include <sbi.h>
+#include <dtb.h>
 #include <stdio.h>
 #include <string.h>
 #include <sync.h>
@@ -91,11 +92,15 @@ static void page_init(void)
 {
     extern char kern_entry[];
 
-    va_pa_offset = KERNBASE - 0x80200000;
+    va_pa_offset = PHYSICAL_MEMORY_OFFSET;
 
-    uint_t mem_begin = KERNEL_BEGIN_PADDR;
-    uint_t mem_size = PHYSICAL_MEMORY_END - KERNEL_BEGIN_PADDR;
-    uint_t mem_end = PHYSICAL_MEMORY_END;
+    uint64_t mem_begin = get_memory_base();
+    uint64_t mem_size = get_memory_size();
+    if (mem_size == 0)
+    {
+        panic("DTB memory info not available");
+    }
+    uint64_t mem_end = mem_begin + mem_size;
 
     cprintf("physcial memory map:\n");
     cprintf("  memory: 0x%08lx, [0x%08lx, 0x%08lx].\n", mem_size, mem_begin,
@@ -265,7 +270,8 @@ struct Page *get_page(pde_t *pgdir, uintptr_t la, pte_t **ptep_store)
 // note: PT is changed, so the TLB need to be invalidate
 static inline void page_remove_pte(pde_t *pgdir, uintptr_t la, pte_t *ptep)
 {
-    /*
+    /* LAB2 EXERCISE 3: YOUR CODE
+     *
      * Please check if ptep is valid, and tlb must be manually updated if
      * mapping is updated
      *
@@ -440,7 +446,7 @@ int copy_range(pde_t *to, pde_t *from, uintptr_t start, uintptr_t end,
              * (3) memory copy from src_kvaddr to dst_kvaddr, size is PGSIZE
              * (4) build the map of phy addr of  nage with the linear addr start
              */
-            
+
             assert(ret == 0);
         }
         start += PGSIZE;
