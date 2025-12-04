@@ -1,8 +1,11 @@
 ### 用户进程 
 
-我们在`proc_init()`函数里初始化进程的时候, 认为启动时运行的ucore程序, 是一个内核进程("第0个"内核进程), 并将其初始化为`idleproc`进程。然后我们新建了一个内核进程执行`init_main()`函数。
+>**须知**
+>经历了前几个章节的洗礼，各位应该对启动流程已经比较熟悉了，那么大家也都明白，前面的几章中，我们始终处于内核态，也就是S态，那么实现我们前面中断处理乃至系统调用的构想的前提，就是我们要先从内核态进入到用户态，那么我们应该如何进入呢。
 
-我们比较lab4和lab5的`init_main()`有何不同。
+我们在 `proc_init()` 函数里初始化进程的时候, 认为启动时运行的ucore程序, 是一个内核进程("第0个"内核进程), 并将其初始化为 `idleproc` 进程。然后我们新建了一个内核进程执行 `init_main()` 函数。
+
+我们比较 lab4 和 lab5 的 `init_main()` 有何不同。
 
 ```c
 // kern/process/proc.c (lab4)
@@ -38,11 +41,11 @@ static int init_main(void *arg) {
 }
 ```
 
-注意到，lab5新建了一个内核进程，执行函数`user_main()`,这个内核进程里我们将要开始执行用户进程。
+注意到，`lab5` 新建了一个内核进程，执行函数 `user_main()`, 这个内核进程里我们将要开始执行用户进程。
 
-`do_wait(0, NULL)`等待子进程退出，也就是等待`user_main()`退出。
+`do_wait(0, NULL)` 等待子进程退出，也就是等待 `user_main()` 退出。
 
-我们来看`user_main()`和`do_wait()`里做了什么
+我们来看 `user_main()` 和 `do_wait()` 里做了什么
 
 ```c
 // kern/process/proc.c
@@ -78,21 +81,21 @@ user_main(void *arg) {
 }
 ```
 
-lab5的Makefile进行了改动， 把用户程序编译到我们的镜像里。
+`lab5` 的 `Makefile` 进行了改动， 把用户程序编译到我们的镜像里。
 
-`_binary_obj___user_##x##_out_start`和`_binary_obj___user_##x##_out_size`都是编译的时候自动生成的符号。注意这里的`##x##`，按照C语言宏的语法，会直接把x的变量名代替进去。
+`_binary_obj___user_##x##_out_start` 和 `_binary_obj___user_##x##_out_size` 都是编译的时候自动生成的符号。注意这里的 `##x##`，按照 C 语言宏的语法，会直接把 `x` 的变量名代替进去。
 
-于是，我们在`user_main()`所做的，就是执行了
+于是，我们在 `user_main()` 所做的，就是执行了
 
 `kern_execve("exit", _binary_obj___user_exit_out_start,_binary_obj___user_exit_out_size)`
 
 这么一个函数。
 
-如果你熟悉`execve()`函数，或许已经猜到这里我们做了什么。
+如果你熟悉 `execve()` 函数，或许已经猜到这里我们做了什么。
 
-实际上，就是加载了存储在这个位置的程序`exit`并在`user_main`这个进程里开始执行。这时`user_main`就从内核进程变成了用户进程。我们在下一节介绍`kern_execve()`的实现。
+实际上，就是加载了存储在这个位置的程序 `exit` 并在 `user_main` 这个进程里开始执行。这时 `user_main` 就**从内核进程变成了用户进程**。我们在后面的小节介绍 `kern_execve()` 的实现。
 
-我们在`user`目录下存储了一些用户程序，在编译的时候放到生成的镜像里。
+我们在 `user` 目录下存储了一些用户程序，在编译的时候放到生成的镜像里。
 
 ```c
 // user/exit.c
@@ -130,7 +133,7 @@ int main(void) {
 }
 ```
 
-这个用户程序`exit`里我们测试了`fork()` `wait()`这些函数。这些函数都是`user/libs/ulib.h`对系统调用的封装。
+这个用户程序 `exit` 里我们测试了 `fork()` `wait()` 这些函数。这些函数都是 `user/libs/ulib.h` 对系统调用的封装。
 
 ```c
 // user/libs/ulib.c
@@ -153,7 +156,7 @@ int kill(int pid) { return sys_kill(pid); }
 int getpid(void) { return sys_getpid(); }
 ```
 
-在用户程序里使用的`cprintf()`也是在`user/libs/stdio.c`重新实现的，和之前比最大的区别是，打印字符的时候需要经过系统调用`sys_putc()`，而不能直接调用`sbi_console_putchar()`。这是自然的，因为只有在Supervisor Mode才能通过`ecall`调用Machine Mode的OpenSBI接口，而在用户态(U Mode)就不能直接使用M mode的接口，而是要通过系统调用。
+在用户程序里使用的 `cprintf()` 也是在 `user/libs/stdio.c` 重新实现的，和之前比最大的区别是，打印字符的时候需要经过系统调用 `sys_putc()`，而不能直接调用 `sbi_console_putchar()`。这是自然的，因为只有在 `Supervisor Mode` 才能通过 `ecall` 调用 `Machine Mode` 的 `OpenSBI` 接口，而在用户态 (`U Mode`) 就不能直接使用 `M mode` 的接口，而是要通过系统调用。
 
 ```c
 // user/libs/stdio.c

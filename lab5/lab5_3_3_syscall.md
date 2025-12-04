@@ -1,24 +1,19 @@
 ### 系统调用实现
 
-系统调用，是用户态(U mode)的程序获取内核态（S mode)服务的方法，所以需要在用户态和内核态都加入对应的支持和处理。我们也可以认为用户态只是提供一个调用的接口，真正的处理都在内核态进行。
+系统调用，是用户态(U mode)的程序获取内核态（S mode）服务的方法，所以需要在用户态和内核态都加入对应的支持和处理。我们也可以认为用户态只是提供一个调用的接口，真正的处理都在内核态进行。
 
 > **须知**
 >在用户进程管理中，有几个关键的系统调用尤为重要：
->- sys_fork()用于创建当前进程的副本，生成子进程。父子进程都会从sys_fork()返回，但返回值不同：子进程得到0，父进程得到子进程的PID，这使得两个进程可以执行不同的代码路径。
->- sys_exec()在当前进程内启动一个新程序，保持PID不变但替换整个内存空间和执行代码。fork()和exec()的组合是Unix-like系统中创建新进程的经典方式。
->- sys_exit()用于终止当前进程，释放其占用的资源。
->- sys_wait()使当前进程挂起，等待特定条件（如子进程退出）满足后再继续执行。
+>- `sys_fork()` 用于创建当前进程的副本，生成子进程。父子进程都会从 `sys_fork()` 返回，但返回值不同：子进程得到0，父进程得到子进程的 `PID`，这使得两个进程可以执行不同的代码路径。
+>- `sys_exec()` 在当前进程内启动一个新程序，保持 `PID` 不变但替换整个内存空间和执行代码。`fork()` 和 `exec()` 的组合是 `Unix-like` 系统中创建新进程的经典方式。
+>- `sys_exit()` 用于终止当前进程，释放其占用的资源。
+>- `sys_wait()` 使当前进程挂起，等待特定条件（如子进程退出）满足后再继续执行。
 
 
 首先我们在头文件里定义一些系统调用的编号。
 
 ```c
 // libs/unistd.h
-#ifndef __LIBS_UNISTD_H__
-#define __LIBS_UNISTD_H__
-
-#define T_SYSCALL           0x80
-
 /* syscall number */
 #define SYS_exit            1
 #define SYS_fork            2
@@ -36,15 +31,9 @@
 #define SYS_shmem           22
 #define SYS_putc            30
 #define SYS_pgdir           31
-
-/* SYS_fork flags */
-#define CLONE_VM            0x00000100  // set if VM shared between processes
-#define CLONE_THREAD        0x00000200  // thread group
-
-#endif /* !__LIBS_UNISTD_H__ */
 ```
 
-我们注意在用户态进行系统调用的核心操作是，通过内联汇编进行`ecall`环境调用。这将产生一个trap, 进入S mode进行异常处理。
+我们注意在用户态进行系统调用的核心操作是，通过内联汇编进行 `ecall` 环境调用。这将产生一个 `trap`, 进入 `S mode` 进行异常处理。
 
 ```c
 // user/libs/syscall.c
@@ -92,7 +81,7 @@ int sys_getpid(void) { return syscall(SYS_getpid); }
 int sys_putc(int c) { return syscall(SYS_putc, c); }
 ```
 
-我们下面看看trap.c是如何转发这个系统调用的。
+我们下面看看 `trap.c` 是如何转发这个系统调用的。
 
 ```c
 // kern/trap/trap.c
@@ -193,130 +182,4 @@ void syscall(void) {
 }
 ```
 
-这样我们就完成了系统调用的转发。接下来就是在`do_exit(), do_execve()`等函数中进行具体处理了。
-
-我们看看`do_execve()`函数
-
-```c
-// kern/mm/vmm.c
-bool user_mem_check(struct mm_struct *mm, uintptr_t addr, size_t len, bool write) {
-    //检查从addr开始长为len的一段内存能否被用户态程序访问
-    if (mm != NULL) {
-        if (!USER_ACCESS(addr, addr + len)) {
-            return 0;
-        }
-        struct vma_struct *vma;
-        uintptr_t start = addr, end = addr + len;
-        while (start < end) {
-            if ((vma = find_vma(mm, start)) == NULL || start < vma->vm_start) {
-                return 0;
-            }
-            if (!(vma->vm_flags & ((write) ? VM_WRITE : VM_READ))) {
-                return 0;
-            }
-            if (write && (vma->vm_flags & VM_STACK)) {
-                if (start < vma->vm_start + PGSIZE) { //check stack start & size
-                    return 0;
-                }
-            }
-            start = vma->vm_end;
-        }
-        return 1;
-    }
-    return KERN_ACCESS(addr, addr + len);
-}
-// kern/process/proc.c
-// do_execve - call exit_mmap(mm)&put_pgdir(mm) to reclaim memory space of current process
-//           - call load_icode to setup new memory space accroding binary prog.
-int do_execve(const char *name, size_t len, unsigned char *binary, size_t size) {
-    struct mm_struct *mm = current->mm;
-    if (!user_mem_check(mm, (uintptr_t)name, len, 0)) { //检查name的内存空间能否被访问
-        return -E_INVAL;
-    }
-    if (len > PROC_NAME_LEN) { //进程名字的长度有上限 PROC_NAME_LEN，在proc.h定义
-        len = PROC_NAME_LEN;
-    }
-    char local_name[PROC_NAME_LEN + 1];
-    memset(local_name, 0, sizeof(local_name));
-    memcpy(local_name, name, len);
-
-    if (mm != NULL) {
-        cputs("mm != NULL");
-        lcr3(boot_cr3);
-        if (mm_count_dec(mm) == 0) {
-            exit_mmap(mm);
-            put_pgdir(mm);
-            mm_destroy(mm);//把进程当前占用的内存释放，之后重新分配内存
-        }
-        current->mm = NULL;
-    }
-    //把新的程序加载到当前进程里的工作都在load_icode()函数里完成
-    int ret;
-    if ((ret = load_icode(binary, size)) != 0) {
-        goto execve_exit;//返回不为0，则加载失败
-    }
-    set_proc_name(current, local_name);
-    //如果set_proc_name的实现不变, 为什么不能直接set_proc_name(current, name)?
-    return 0;
-
-execve_exit:
-    do_exit(ret);
-    panic("already exit: %e.\n", ret);
-}
-```
-
-那么我们如何实现`kernel_execve()`函数？
-
-能否直接调用`do_execve()`?
-
-```c
-// kern/process/proc.c
-static int kernel_execve(const char *name, unsigned char *binary, size_t size) {
-    int64_t ret=0, len = strlen(name);
-    ret = do_execve(name, len, binary, size);
-    cprintf("ret = %d\n", ret);
-    return ret;
-}
-```
-
-很不幸。这么做行不通。`do_execve()` `load_icode()`里面只是构建了用户程序运行的上下文，但是并没有完成切换。上下文切换实际上要借助中断处理的返回来完成。直接调用`do_execve()`是无法完成上下文切换的。如果是在用户态调用`exec()`, 系统调用的`ecall`产生的中断返回时， 就可以完成上下文切换。
-
-由于目前我们在S mode下，所以不能通过`ecall`来产生中断。我们这里采取一个取巧的办法，用`ebreak`产生断点中断进行处理，通过设置`a7`寄存器的值为10说明这不是一个普通的断点中断，而是要转发到`syscall()`, 这样用一个不是特别优雅的方式，实现了在内核态使用系统调用。
-
-```c
-// kern/process/proc.c
-// kernel_execve - do SYS_exec syscall to exec a user program called by user_main kernel_thread
-static int kernel_execve(const char *name, unsigned char *binary, size_t size) {
-    int64_t ret=0, len = strlen(name);
-    asm volatile(
-        "li a0, %1\n"
-        "lw a1, %2\n"
-        "lw a2, %3\n"
-        "lw a3, %4\n"
-        "lw a4, %5\n"
-        "li a7, 10\n"
-        "ebreak\n"
-        "sw a0, %0\n"
-        : "=m"(ret)
-        : "i"(SYS_exec), "m"(name), "m"(len), "m"(binary), "m"(size)
-        : "memory"); //这里内联汇编的格式，和用户态调用ecall的格式类似，只是ecall换成了ebreak
-    cprintf("ret = %d\n", ret);
-    return ret;
-}
-// kern/trap/trap.c
-void exception_handler(struct trapframe *tf) {
-    int ret;
-    switch (tf->cause) {
-        case CAUSE_BREAKPOINT:
-            cprintf("Breakpoint\n");
-            if(tf->gpr.a7 == 10){
-                tf->epc += 4; //注意返回时要执行ebreak的下一条指令
-                syscall();
-            }
-            break;
-  		/* other cases ... */
-    }
-}
-```
-
-注意我们需要让CPU进入U mode执行`do_execve()`加载的用户程序。进行系统调用`sys_exec`之后，我们在trap返回的时候调用了`sret`指令，这时只要`sstatus`寄存器的`SPP`二进制位为0，就会切换到U mode，但`SPP`存储的是“进入trap之前来自什么特权级”，也就是说我们这里ebreak之后`SPP`的数值为1，sret之后会回到S mode在内核态执行用户程序。所以`load_icode()`函数在构造新进程的时候，会把`SSTATUS_SPP`设置为0，使得`sret`的时候能回到U mode。
+这样我们就完成了系统调用的转发。接下来就是在 `do_exit()`, `do_execve()` 等函数中进行具体处理了。
