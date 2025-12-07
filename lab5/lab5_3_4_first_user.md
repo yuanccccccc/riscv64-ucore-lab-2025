@@ -1,6 +1,6 @@
 ### 第一次进入用户态
 
-前面我们提到过，我们要通过 `kernel_execve` 来启动第一个用户进程，进入用户态，那么应该怎么实现 `kernel_execve` 函数呢，我们先来看看 `do_execve()` 函数
+前面我们提到过，我们要通过 `kernel_execve` 来启动第一个用户进程，进入用户态，那么应该怎么实现 `kernel_execve` 函数呢，我们先来看看 `do_execve()` 函数。
 
 ```c
 // kern/process/proc.c
@@ -43,7 +43,7 @@ execve_exit:
 }
 ```
 
-那么我们如何实现 `kernel_execve()` 函数？能否直接调用 `do_execve()`?
+那么我们如何实现 `kernel_execve()` 函数？能否直接调用 `do_execve()`？
 
 ```c
 static int kernel_execve(const char *name, unsigned char *binary, size_t size) {
@@ -54,44 +54,36 @@ static int kernel_execve(const char *name, unsigned char *binary, size_t size) {
 }
 ```
 
-很不幸。这么做行不通。`do_execve()` `load_icode()` 里面只是构建了用户程序运行的上下文，但是并没有完成切换。上下文切换实际上要借助中断处理的返回来完成。直接调用 `do_execve()` 是无法完成上下文切换的。如果是在用户态调用 `exec()`, 系统调用的 `ecall` 产生的中断返回时， 就可以完成上下文切换。
+很不幸。这么做行不通。如果在内核中直接调用 `do_execve()`，整个执行仍然停留在 S 态，因为 `do_execve()` 只是准备好上下文，却没有让 CPU 使用它。系统中的用户态切换是通过中断处理的返回路径实现的，也就是说，只有通过某种 trap-return 机制（最终执行到 `sret`）才能离开内核态。对于正常的用户态 `exec()` 调用，这一步是由系统调用的中断返回自动完成的；但是在当前场景中，我们是在内核线程的上下文里启动用户程序，并没有触发任何异常或系统调用。
 
-但是，目前我们在 `S mode` 下，所以不能通过 `ecall` 来产生中断。我们这里采取一个取巧的办法，用 `ebreak` 产生断点中断进行处理，通过设置 `a7` 寄存器的值为10说明这不是一个普通的断点中断，而是要转发到 `syscall()`, 这样用一个不是特别优雅的方式，实现了在内核态复用系统调用的接口。
+目前我们在 `S mode` 下，所以不能通过 `ecall` 来产生中断。因此，其中一种取巧的手段是，人为产生一次`ebreak`异常，再在异常处理里进行一次 `syscall`，从而复用系统调用的`trap`返回路径。这样用一个不是特别优雅的方式，可以实现在内核态复用系统调用的接口（有兴趣的同学可以自己编写代码实现这种方法）。
+
+另一种更直接、清晰的方法是手动构造新的`trapframe`，将它放置在当前进程的内核栈顶，然后主动切换到这个`trapframe`，并跳转到`__trapret`。这样可以立即进入通用的中断返回路径，按照`trapframe`中指定的内容恢复寄存器，并最终执行`sret`，顺利从内核态切换到用户态。`kernel_execve()`实现如下：
 
 ```c
 // kern/process/proc.c
-// kernel_execve - do SYS_exec syscall to exec a user program called by user_main kernel_thread
-static int kernel_execve(const char *name, unsigned char *binary, size_t size) {
-    int64_t ret=0, len = strlen(name);
-    asm volatile(
-        "li a0, %1\n"
-        "lw a1, %2\n"
-        "lw a2, %3\n"
-        "lw a3, %4\n"
-        "lw a4, %5\n"
-        "li a7, 10\n"
-        "ebreak\n"
-        "sw a0, %0\n"
-        : "=m"(ret)
-        : "i"(SYS_exec), "m"(name), "m"(len), "m"(binary), "m"(size)
-        : "memory"); //这里内联汇编的格式，和用户态调用ecall的格式类似，只是ecall换成了ebreak
-    cprintf("ret = %d\n", ret);
-    return ret;
-}
-// kern/trap/trap.c
-void exception_handler(struct trapframe *tf) {
+// kernel_execve - build a new trapframe, execute do_execve in-kernel, and return to user mode via __trapret
+static int 
+kernel_execve(const char *name, unsigned char *binary, size_t size)
+{
     int ret;
-    switch (tf->cause) {
-        case CAUSE_BREAKPOINT:
-            cprintf("Breakpoint\n");
-            if(tf->gpr.a7 == 10){
-                tf->epc += 4; //注意返回时要执行ebreak的下一条指令
-                syscall();
-            }
-            break;
-  		/* other cases ... */
-    }
+    size_t len = strlen(name);
+    struct trapframe *old_tf = current->tf;
+    struct trapframe *new_tf = (struct trapframe *)(current->kstack + KSTACKSIZE - sizeof(struct trapframe));
+    memcpy(new_tf, old_tf, sizeof(struct trapframe));
+    current->tf = new_tf;
+    ret = do_execve(name, len, binary, size);
+    asm volatile(
+        "mv sp, %0\n"    // sp 指向新的 trapframe
+        "j __trapret\n"  // 恢复寄存器 + sret 返回用户态
+        :
+        : "r"(new_tf)
+        : "memory"
+    );
+    return ret;
 }
 ```
 
-注意我们需要让 `CPU` 进入 `U mode` 执行 `do_execve()` 加载的用户程序。进行系统调用 `sys_exec` 之后，我们在 `trap` 返回的时候调用了 `sret` 指令，这时只要 `sstatus` 寄存器的 `SPP` 二进制位为0，就会切换到 `U mode`，但 `SPP` 存储的是“进入 `trap` 之前来自什么特权级”，也就是说我们这里 `ebreak` 之后 `SPP` 的数值为1，`sret` 之后会回到 `S mode` 在内核态执行用户程序。所以 `load_icode()` 函数在构造新进程的时候，会把 `SSTATUS_SPP` 设置为0，使得 `sret` 的时候能回到 `U mode`。
+在这个过程中，`load_icode()` 在加载用户程序时已经把 `trapframe` 中的 `sepc` 设置为用户程序的入口地址，将用户栈指针设为新地址空间中的用户栈顶，并且清除了 `sstatus` 的 `SPP` 位，使其为 0。`SPP` 记录的是“进入中断之前所在的特权级”，而 `sret` 会根据它决定返回时 `CPU` 的特权级别。由于我们希望返回到用户态运行用户程序，因此必须确保这一位被清零。
+
+当 `kernel_execve()` 跳转到 `__trapret` 时，系统会按照 `trapframe` 恢复寄存器状态，并最终执行 `sret`。因为 `trapframe` 中的 `SPP` 已为 0，`sret` 的效果是将 CPU 从 S 模式切换到 U 模式，并从用户程序的入口地址开始执行指令。至此，系统第一次成功进入用户态，正式开始运行我们加载的第一个用户程序。
