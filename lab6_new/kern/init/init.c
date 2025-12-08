@@ -45,10 +45,3 @@ int kern_init(void)
 
     cpu_idle(); // run idle process
 }
-
-static void
-lab1_print_cur_status(void)
-{
-    static int round = 0;
-    round++;
-}

@@ -15,9 +15,9 @@
  * hint: see libs/list.h for routines of the list structures.
  */
 static void
-RR_init(struct run_queue *rq) {
+RR_init(struct run_queue *rq)
+{
     // LAB6: YOUR CODE
-    
 }
 
 /*
@@ -28,13 +28,13 @@ RR_init(struct run_queue *rq) {
  *
  * proc->time_slice denotes the time slices allocation for the
  * process, which should set to rq->max_time_slice.
- * 
+ *
  * hint: see libs/list.h for routines of the list structures.
  */
 static void
-RR_enqueue(struct run_queue *rq, struct proc_struct *proc) {
+RR_enqueue(struct run_queue *rq, struct proc_struct *proc)
+{
     // LAB6: YOUR CODE
-    
 }
 
 /*
@@ -45,9 +45,9 @@ RR_enqueue(struct run_queue *rq, struct proc_struct *proc) {
  * hint: see libs/list.h for routines of the list structures.
  */
 static void
-RR_dequeue(struct run_queue *rq, struct proc_struct *proc) {
+RR_dequeue(struct run_queue *rq, struct proc_struct *proc)
+{
     // LAB6: YOUR CODE
-    
 }
 
 /*
@@ -59,9 +59,9 @@ RR_dequeue(struct run_queue *rq, struct proc_struct *proc) {
  * hint: see libs/list.h for routines of the list structures.
  */
 static struct proc_struct *
-RR_pick_next(struct run_queue *rq) {
+RR_pick_next(struct run_queue *rq)
+{
     // LAB6: YOUR CODE
-    
 }
 
 /*
@@ -72,9 +72,9 @@ RR_pick_next(struct run_queue *rq) {
  * is the flag variable for process switching.
  */
 static void
-RR_proc_tick(struct run_queue *rq, struct proc_struct *proc) {
+RR_proc_tick(struct run_queue *rq, struct proc_struct *proc)
+{
     // LAB6: YOUR CODE
-    
 }
 
 struct sched_class default_sched_class = {
@@ -85,4 +85,3 @@ struct sched_class default_sched_class = {
     .pick_next = RR_pick_next,
     .proc_tick = RR_proc_tick,
 };
-

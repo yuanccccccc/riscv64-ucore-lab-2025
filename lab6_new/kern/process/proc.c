@@ -123,8 +123,6 @@ alloc_proc(void)
          *       uint32_t lab6_stride;                       // stride value (lab6 stride)
          *       uint32_t lab6_priority;                     // priority value (lab6 stride)
          */
-
-        
     }
     return proc;
 }
@@ -237,7 +235,7 @@ void proc_run(struct proc_struct *proc)
          *   local_intr_restore():     Enable Interrupts
          *   lsatp():                   Modify the value of satp register
          *   switch_to():              Context switching between two processes
-         */        
+         */
     }
 }
 
@@ -421,7 +419,7 @@ int do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf)
         goto fork_out;
     }
     ret = -E_NO_MEM;
-    // LAB4:填写你在lab44中实现的代码
+    // LAB4:填写你在lab4中实现的代码
     /*
      * Some Useful MACROs, Functions and DEFINEs, you can use them in below implementation.
      * MACROs or Functions:
@@ -454,7 +452,7 @@ int do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf)
      *    update step 1: set child proc's parent to current process, make sure current process's wait_state is 0
      *    update step 5: insert proc_struct into hash_list && proc_list, set the relation links of process
      */
-    
+
 fork_out:
     return ret;
 
@@ -850,7 +848,7 @@ int do_kill(int pid)
 }
 
 // kernel_execve - build a new trapframe, execute do_execve in-kernel, and return to user mode via __trapret
-static int 
+static int
 kernel_execve(const char *name, unsigned char *binary, size_t size)
 {
     int ret;
@@ -865,8 +863,7 @@ kernel_execve(const char *name, unsigned char *binary, size_t size)
         "j __trapret\n"
         :
         : "r"(new_tf)
-        : "memory"
-    );
+        : "memory");
     return ret;
 }
 
