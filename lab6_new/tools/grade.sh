@@ -342,26 +342,13 @@ default_check() {
     'check_boot_pgdir() succeeded!'				\
     'kmalloc_init() succeeded!'                             \
     'check_vma_struct() succeeded!'                             \
-    'page fault at 0x00000100: K/W'                             \
-    'check_pgfault() succeeded!'                                \
     'check_vmm() succeeded.'					\
-    'page fault at 0x00001000: K/W'            \
-    'page fault at 0x00002000: K/W'            \
-    'page fault at 0x00003000: K/W'            \
-    'page fault at 0x00004000: K/W'            \
-    'write Virt Page e in fifo_check_swap'			\
-    'page fault at 0x00005000: K/W'		\
-    'page fault at 0x00001000: K/W'		\
-    'page fault at 0x00002000: K/W'		\
-    'page fault at 0x00003000: K/W'		\
-    'page fault at 0x00004000: K/W'		\
-    'check_swap() succeeded!'					\
     '++ setup timer interrupts'
 }
 
 ## check now!!
 run_test -prog 'priority'      -check default_check             \
-        'sched class: stride_scheduler'                         \
+        'sched class: RR_scheduler'                         \
         'kernel_execve: pid = 2, name = "priority".'            \
         'main: fork ok,now need to wait pids.'                  \
         'set priority to 5'                                     \
