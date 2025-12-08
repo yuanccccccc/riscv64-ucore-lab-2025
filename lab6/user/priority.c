@@ -57,7 +57,7 @@ main(void) {
          cprintf("main: pid %d, acc %d, time %d\n",pids[i],status[i],gettime_msec()); 
      }
      cprintf("main: wait pids over\n");
-     cprintf("stride sched correct result:");
+     cprintf("sched result:");
      for (i = 0; i < TOTAL; i ++)
      {
          cprintf(" %d", (status[i] * 2 / status[0] + 1) / 2);
