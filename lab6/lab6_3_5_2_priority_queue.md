@@ -6,19 +6,19 @@
 
 本次实验提供了libs/skew\_heap.h作为优先队列的一个实现，该实现定义相关的结构和接口，其中主要包括：
 
-```
-1   // 优先队列节点的结构
-2   typedef struct skew_heap_entry  skew_heap_entry_t;
-3   // 初始化一个队列节点
-4   void skew_heap_init(skew_heap_entry_t *a);
-5   // 将节点 b 插入至以节点 a 为队列头的队列中去，返回插入后的队列
-6   skew_heap_entry_t  *skew_heap_insert(skew_heap_entry_t  *a,
-7                                        skew_heap_entry_t  *b,
-8                                        compare_f comp);
-9   // 将节点 b 插入从以节点 a 为队列头的队列中去，返回删除后的队列
-10      skew_heap_entry_t  *skew_heap_remove(skew_heap_entry_t  *a,
-11                                           skew_heap_entry_t  *b,
-12                                           compare_f comp);
+```c
+   // 优先队列节点的结构
+   typedef struct skew_heap_entry  skew_heap_entry_t;
+   // 初始化一个队列节点
+   void skew_heap_init(skew_heap_entry_t *a);
+   // 将节点 b 插入至以节点 a 为队列头的队列中去，返回插入后的队列
+   skew_heap_entry_t  *skew_heap_insert(skew_heap_entry_t  *a,
+                                        skew_heap_entry_t  *b,
+                                        compare_f comp);
+   // 将节点 b 插入从以节点 a 为队列头的队列中去，返回删除后的队列
+      skew_heap_entry_t  *skew_heap_remove(skew_heap_entry_t  *a,
+                                           skew_heap_entry_t  *b,
+                                           compare_f comp);
 ```
 
 其中优先队列的顺序是由比较函数comp决定的，sched\_stride.c中提供了proc\_stride\_comp\_f比较器用来比较两个stride的大小，你可以直接使用它。当使用优先队列作为Stride调度器的实现方式之后，运行队列结构也需要作相关改变，其中包括：
@@ -51,4 +51,4 @@
     * If proc-\>time\_slice \> 0, proc-\>time\_slice --   
     * If proc-\>time\_slice == 0, set the flag proc-\>need\_resched   
 
-大家可以根据上述伪代码，完成本次实验练习2。
+大家可以根据上述伪代码，完成本次challenge。

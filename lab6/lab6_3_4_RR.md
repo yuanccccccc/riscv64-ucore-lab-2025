@@ -2,7 +2,7 @@
 
 时间片轮转调度(Round-Robin Scheduling)算法非常简单。它为每一个进程维护了一个最大运行时间片。当一个进程运行够了其最大运行时间片那么长的时间后，调度器会把它标记为需要调度，并且把它的进程控制块放在队尾，重置其时间片。这种调度算法保证了公平性，每个进程都有均等的机会使用CPU，但是没有区分不同进程的优先级（这个也就是在Stride算法中需要考虑的问题）。
 
-在当前进程的运行过程中，每过一段时间就会触发一次时钟中断，在时钟中断的处理函数中会调用proc_tick减少其时间片。
+在当前进程的运行过程中，每过一段时间就会触发一次时钟中断，在时钟中断的处理函数中会调用proc_tick减少其时间片。当时间片减少为0时，便把当前进程设置为可调度。当scheduler来调度当前进程时，如果当前进程状态依旧为PROC_RUNNABLE，便会将当前进程放到rq的最后进行排队，直到排到这个进程时才会再次获取CPU来执行。
 
 下面我们来实现以下时间片轮转算法相对应的调度器接口吧！
 
@@ -29,11 +29,7 @@ RR_dequeue(struct run_queue *rq, struct proc_struct *proc) {
 ```c
 static struct proc_struct *
 RR_pick_next(struct run_queue *rq) {
-    list_entry_t *le = list_next(&(rq->run_list));
-    if (le != &(rq->run_list)) {
-        return le2proc(le, run_link);
-    }
-    return NULL;
+    // LAB6: YOUR CODE
 }
 ```
 
@@ -42,13 +38,8 @@ RR_pick_next(struct run_queue *rq) {
 ```c
 static void
 RR_proc_tick(struct run_queue *rq, struct proc_struct *proc) {
-    if (proc->time_slice > 0) {
-        proc->time_slice --;
-    }
-    if (proc->time_slice == 0) {
-        proc->need_resched = 1;
-    }
+    // LAB6: YOUR CODE
 }
 ```
 
-至此我们就实现完了和时间片轮转算法相关的所有重要接口。类似于RR算法，我们也可以参照这个方法实现自己的调度算法。本次实验中需要同学们自己实现Stride调度算法。
+至此我们就实现完了和时间片轮转算法相关的所有重要接口。类似于RR算法，我们也可以参照这个方法实现自己的调度算法。本次实验中还需要同学们自己实现Stride调度算法。

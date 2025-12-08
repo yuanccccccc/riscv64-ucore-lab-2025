@@ -1,4 +1,4 @@
-## 附录：执行`make qemu`的大致输出
+## stride调度算法执行`make qemu`的大致输出
 ```
 $ make qemu
 ......

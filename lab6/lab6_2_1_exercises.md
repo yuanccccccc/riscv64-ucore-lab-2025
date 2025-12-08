@@ -68,6 +68,12 @@
 
 #### 扩展阅读：Linux 的 CFS 调度算法 （感兴趣的同学可以学习并实现，不计入成绩）
 
-在ucore的调度器框架下也可以实现Linux的CFS调度算法。可阅读相关Linux内核书籍或查询网上资料，可了解CFS的细节，然后大致实现在ucore中。
+在ucore的调度器框架下也可以实现Linux的CFS调度算法。可阅读相关Linux内核书籍或查询网上资料，这里给出CFS调度算法的一些相关的资料。
+
+* [CFS 调度器 — Linux 内核文档](https://docs.linuxkernel.org.cn/scheduler/sched-design-CFS.html)
+* [Linux完全公平调度(CFS)深度解剖（安卓流畅度核心）](https://www.cnblogs.com/16msyanjiusuo/articles/18720910)
+* [一文搞懂linux cfs调度器](https://zhuanlan.zhihu.com/p/556295381)
+
+可通过这些相关资料了解CFS的细节，然后大致实现在ucore中。（可以作为Challenge 2的实现）
 
    
