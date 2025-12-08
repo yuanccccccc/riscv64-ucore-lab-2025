@@ -895,25 +895,24 @@ int do_kill(int pid)
     return -E_INVAL;
 }
 
-// kernel_execve - do SYS_exec syscall to exec a user program called by user_main kernel_thread
-static int
+// kernel_execve - build a new trapframe, execute do_execve in-kernel, and return to user mode via __trapret
+static int 
 kernel_execve(const char *name, unsigned char *binary, size_t size)
 {
-    int64_t ret = 0, len = strlen(name);
-    //   ret = do_execve(name, len, binary, size);
+    int ret;
+    size_t len = strlen(name);
+    struct trapframe *old_tf = current->tf;
+    struct trapframe *new_tf = (struct trapframe *)(current->kstack + KSTACKSIZE - sizeof(struct trapframe));
+    memcpy(new_tf, old_tf, sizeof(struct trapframe));
+    current->tf = new_tf;
+    ret = do_execve(name, len, binary, size);
     asm volatile(
-        "li a0, %1\n"
-        "lw a1, %2\n"
-        "lw a2, %3\n"
-        "lw a3, %4\n"
-        "lw a4, %5\n"
-        "li a7, 10\n"
-        "ebreak\n"
-        "sw a0, %0\n"
-        : "=m"(ret)
-        : "i"(SYS_exec), "m"(name), "m"(len), "m"(binary), "m"(size)
-        : "memory");
-    cprintf("ret = %d\n", ret);
+        "mv sp, %0\n"
+        "j __trapret\n"
+        :
+        : "r"(new_tf)
+        : "memory"
+    );
     return ret;
 }
 

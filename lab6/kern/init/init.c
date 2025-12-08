@@ -8,6 +8,7 @@
 #include <clock.h>
 #include <intr.h>
 #include <pmm.h>
+#include <dtb.h>
 #include <vmm.h>
 #include <proc.h>
 #include <kmonitor.h>
@@ -27,6 +28,8 @@ int kern_init(void)
     print_kerninfo();
 
     // grade_backtrace();
+
+    dtb_init(); // init dtb
 
     pmm_init(); // init physical memory management
 
