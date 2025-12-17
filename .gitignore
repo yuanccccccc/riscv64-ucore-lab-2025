@@ -4,3 +4,4 @@
 */.qemu.out
 */.log
 */.*.log
+*/disk0/*
