@@ -55,9 +55,9 @@ lab6
 │   │   ├── proc.h
 │   │   └── switch.S
 │   ├── schedule
+│   │   ├── default_sched.c
 │   │   ├── default_sched.h
-│   │   ├── default_sched_c.c
-│   │   ├── default_sched_stride
+│   │   ├── default_sched_stride.c
 │   │   ├── sched.c
 │   │   └── sched.h
 │   ├── sync
