@@ -115,7 +115,7 @@ alloc_proc(void)
          *       struct proc_struct *cptr, *yptr, *optr;     // relations between processes
          */
 
-        // LAB6:YOUR CODE (update LAB5 steps)
+        // LAB6:填写你在lab6中实现的代码 (update LAB5 steps)
         /*
          * below fields(add in LAB6) in proc_struct need to be initialized
          *       struct run_queue *rq;                       // run queue contains Process
