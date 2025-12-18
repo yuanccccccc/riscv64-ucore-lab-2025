@@ -1,8 +1,8 @@
-# lab8 4/n 从zhong duan到zhong duan 
+### 用户程序加载与终端执行
 
 这是ucore step by step tutorial的最后一节: 实现一个简单的终端(shell)。
 
-可以说，我们的操作系统之旅，从zhong duan(中断)开始， 也在zhong duan(终端）结束。
+我们的操作系统之旅，从内核初始化开始，最终在终端中与用户程序交互结束。
 
 #### 程序的执行
 

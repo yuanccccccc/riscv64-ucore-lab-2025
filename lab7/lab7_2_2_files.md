@@ -1,14 +1,4 @@
-# lab7 同步互斥
-
-在本章中我们来实现ucore中的同步互斥机制。
-
-在之前的几章中我们已经实现了进程以及调度算法，可以让多个进程并发的执行。在现实的系统当中，有许多多线程的系统都需要协同的完成某一项任务。但是在协同的过程中，存在许多资源共享的问题，比如对一个文件读写的并发访问等等。这些问题需要我们提供一些同步互斥的机制来让程序可以有序的、无冲突的完成他们的工作，这也是这一章内我们要解决的问题。
-
-我们最终实现的目标是解决“哲学家就餐问题”。“哲学家就餐问题”是一个非常有名的同步互斥问题：有五个哲学家围成一圈吃饭，每两个哲学家中间有一根筷子。每个需要就餐的哲学家需要两根筷子才可以就餐。哲学家处于两种状态之间：思考和饥饿。当哲学家处于思考的状态时，哲学家便无欲无求；而当哲学家处于饥饿状态时，他必须通过就餐来解决饥饿，重新回到思考的状态。如何让这5个哲学家可以不发生死锁的把这一顿饭吃完就是我们要解决的目标。
-
-下面，我们先从一些同步互斥实现的机制讲起，慢慢的了解ucore中同步互斥机制的实现，最后解决哲学家就餐问题吧！
-
-## 项目组成
+### 项目组成
 
 ```
 lab7
@@ -27,17 +17,13 @@ lab7
 │   │   ├── clock.h
 │   │   ├── console.c
 │   │   ├── console.h
-│   │   ├── ide.c
-│   │   ├── ide.h
+│   │   ├── dtb.c
+│   │   ├── dtb.h
 │   │   ├── intr.c
 │   │   ├── intr.h
 │   │   ├── kbdreg.h
 │   │   ├── picirq.c
 │   │   └── picirq.h
-│   ├── fs
-│   │   ├── fs.h
-│   │   ├── swapfs.c
-│   │   └── swapfs.h
 │   ├── init
 │   │   ├── entry.S
 │   │   └── init.c
@@ -53,10 +39,6 @@ lab7
 │   │   ├── mmu.h
 │   │   ├── pmm.c
 │   │   ├── pmm.h
-│   │   ├── swap.c
-│   │   ├── swap.h
-│   │   ├── swap_fifo.c
-│   │   ├── swap_fifo.h
 │   │   ├── vmm.c
 │   │   └── vmm.h
 │   ├── process
@@ -65,8 +47,8 @@ lab7
 │   │   ├── proc.h
 │   │   └── switch.S
 │   ├── schedule
+│   │   ├── default_sched.c
 │   │   ├── default_sched.h
-│   │   ├── default_sched_c
 │   │   ├── default_sched_stride.c
 │   │   ├── sched.c
 │   │   └── sched.h
@@ -86,7 +68,7 @@ lab7
 │       ├── trap.c
 │       ├── trap.h
 │       └── trapentry.S
-├── lab5.md
+├── lab7.md
 ├── libs
 │   ├── atomic.h
 │   ├── defs.h
@@ -143,7 +125,16 @@ lab7
     ├── testbss.c
     ├── waitkill.c
     └── yield.c
-
-16 directories, 115 files
 ```
 
+简单说明如下：
+
+* kern/schedule/{sched.h,sched.c}: 增加了定时器（timer）机制，用于进程/线程的do_sleep功能。
+* kern/sync/sync.h: 去除了lock实现（这对于不抢占内核没用）。
+* kern/sync/wait.[ch]:定义了等待队列wait_queue结构和等待entry的wait结构以及在此之上的函数，这是ucore中的信号量semophore机制和条件变量机制的基础，在本次实验中你需要了解其实现。
+* kern/sync/sem.[ch]:定义并实现了ucore中内核级信号量相关的数据结构和函数，本次试验中你需要了解其中的实现，并基于此完成内核级条件变量的设计与实现。
+* user/ libs/ {syscall.[ch],ulib.[ch]}与kern/sync/syscall.c：实现了进程sleep相关的系统调用的参数传递和调用关系。
+* user/{ sleep.c,sleepkill.c}: 进程睡眠相关的一些测试用户程序。
+* kern/sync/monitor.[ch]:基于管程的条件变量的实现程序，在本次实验中是练习的一部分，要求完成。
+* kern/sync/check\_sync.c：实现了基于管程的哲学家就餐问题，在本次实验中是练习的一部分，要求完成基于管程的哲学家就餐问题。
+* kern/mm/vmm.[ch]：用信号量mm\_sem取代mm\_struct中原有的mm\_lock。（本次实验不用管）
