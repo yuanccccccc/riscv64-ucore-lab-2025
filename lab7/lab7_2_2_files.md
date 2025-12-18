@@ -2,100 +2,101 @@
 
 ```
 lab7
-├── Makefile
+├── CMakeLists.txt
 ├── kern
-│   ├── debug
-│   │   ├── assert.h
-│   │   ├── kdebug.c
-│   │   ├── kdebug.h
-│   │   ├── kmonitor.c
-│   │   ├── kmonitor.h
-│   │   ├── panic.c
-│   │   └── stab.h
-│   ├── driver
-│   │   ├── clock.c
-│   │   ├── clock.h
-│   │   ├── console.c
-│   │   ├── console.h
-│   │   ├── dtb.c
-│   │   ├── dtb.h
-│   │   ├── intr.c
-│   │   ├── intr.h
-│   │   ├── kbdreg.h
-│   │   ├── picirq.c
-│   │   └── picirq.h
-│   ├── init
-│   │   ├── entry.S
-│   │   └── init.c
-│   ├── libs
-│   │   ├── readline.c
-│   │   └── stdio.c
-│   ├── mm
-│   │   ├── default_pmm.c
-│   │   ├── default_pmm.h
-│   │   ├── kmalloc.c
-│   │   ├── kmalloc.h
-│   │   ├── memlayout.h
-│   │   ├── mmu.h
-│   │   ├── pmm.c
-│   │   ├── pmm.h
-│   │   ├── vmm.c
-│   │   └── vmm.h
-│   ├── process
-│   │   ├── entry.S
-│   │   ├── proc.c
-│   │   ├── proc.h
-│   │   └── switch.S
-│   ├── schedule
-│   │   ├── default_sched.c
-│   │   ├── default_sched.h
-│   │   ├── default_sched_stride.c
-│   │   ├── sched.c
-│   │   └── sched.h
-│   ├── sync
-│   │   ├── check_sync.c
-│   │   ├── monitor.c
-│   │   ├── monitor.h
-│   │   ├── sem.c
-│   │   ├── sem.h
-│   │   ├── sync.h
-│   │   ├── wait.c
-│   │   └── wait.h
-│   ├── syscall
-│   │   ├── syscall.c
-│   │   └── syscall.h
-│   └── trap
-│       ├── trap.c
-│       ├── trap.h
-│       └── trapentry.S
+│   ├── debug
+│   │   ├── assert.h
+│   │   ├── kdebug.c
+│   │   ├── kdebug.h
+│   │   ├── kmonitor.c
+│   │   ├── kmonitor.h
+│   │   ├── panic.c
+│   │   └── stab.h
+│   ├── driver
+│   │   ├── clock.c
+│   │   ├── clock.h
+│   │   ├── console.c
+│   │   ├── console.h
+│   │   ├── dtb.c
+│   │   ├── dtb.h
+│   │   ├── intr.c
+│   │   ├── intr.h
+│   │   ├── kbdreg.h
+│   │   ├── picirq.c
+│   │   └── picirq.h
+│   ├── init
+│   │   ├── entry.S
+│   │   └── init.c
+│   ├── libs
+│   │   ├── readline.c
+│   │   └── stdio.c
+│   ├── mm
+│   │   ├── default_pmm.c
+│   │   ├── default_pmm.h
+│   │   ├── kmalloc.c
+│   │   ├── kmalloc.h
+│   │   ├── memlayout.h
+│   │   ├── mmu.h
+│   │   ├── pmm.c
+│   │   ├── pmm.h
+│   │   ├── vmm.c
+│   │   └── vmm.h
+│   ├── process
+│   │   ├── entry.S
+│   │   ├── proc.c
+│   │   ├── proc.h
+│   │   └── switch.S
+│   ├── schedule
+│   │   ├── default_sched_c
+│   │   ├── default_sched.h
+│   │   ├── default_sched_stride.c
+│   │   ├── sched.c
+│   │   └── sched.h
+│   ├── sync
+│   │   ├── check_sync.c
+│   │   ├── monitor.c
+│   │   ├── monitor.h
+│   │   ├── sem.c
+│   │   ├── sem.h
+│   │   ├── sync.h
+│   │   ├── wait.c
+│   │   └── wait.h
+│   ├── syscall
+│   │   ├── syscall.c
+│   │   └── syscall.h
+│   └── trap
+│       ├── trap.c
+│       ├── trapentry.S
+│       └── trap.h
 ├── lab7.md
 ├── libs
-│   ├── atomic.h
-│   ├── defs.h
-│   ├── elf.h
-│   ├── error.h
-│   ├── hash.c
-│   ├── list.h
-│   ├── printfmt.c
-│   ├── rand.c
-│   ├── riscv.h
-│   ├── sbi.h
-│   ├── skew_heap.h
-│   ├── stdarg.h
-│   ├── stdio.h
-│   ├── stdlib.h
-│   ├── string.c
-│   ├── string.h
-│   └── unistd.h
+│   ├── atomic.h
+│   ├── defs.h
+│   ├── elf.h
+│   ├── error.h
+│   ├── hash.c
+│   ├── list.h
+│   ├── printfmt.c
+│   ├── rand.c
+│   ├── riscv.h
+│   ├── sbi.h
+│   ├── skew_heap.h
+│   ├── stdarg.h
+│   ├── stdio.h
+│   ├── stdlib.h
+│   ├── string.c
+│   ├── string.h
+│   └── unistd.h
+├── Makefile
 ├── tools
-│   ├── boot.ld
-│   ├── function.mk
-│   ├── gdbinit
-│   ├── grade.sh
-│   ├── kernel.ld
-│   ├── sign.c
-│   ├── user.ld
-│   └── vector.c
+│   ├── boot.ld
+│   ├── function.mk
+│   ├── gdbinit
+│   ├── grade.sh
+│   ├── kernel.ld
+│   ├── sign.c
+│   ├── user.ld
+│   └── vector.c
 └── user
     ├── badarg.c
     ├── badsegment.c
@@ -107,14 +108,14 @@ lab7
     ├── forktree.c
     ├── hello.c
     ├── libs
-    │   ├── initcode.S
-    │   ├── panic.c
-    │   ├── stdio.c
-    │   ├── syscall.c
-    │   ├── syscall.h
-    │   ├── ulib.c
-    │   ├── ulib.h
-    │   └── umain.c
+    │   ├── initcode.S
+    │   ├── panic.c
+    │   ├── stdio.c
+    │   ├── syscall.c
+    │   ├── syscall.h
+    │   ├── ulib.c
+    │   ├── ulib.h
+    │   └── umain.c
     ├── matrix.c
     ├── pgdir.c
     ├── priority.c
@@ -125,6 +126,8 @@ lab7
     ├── testbss.c
     ├── waitkill.c
     └── yield.c
+
+15 directories, 109 files
 ```
 
 简单说明如下：
