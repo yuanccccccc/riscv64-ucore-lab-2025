@@ -101,11 +101,10 @@ alloc_proc(void)
         proc->pgdir = boot_pgdir_pa;
         proc->flags = 0;
         memset(proc->name, 0, PROC_NAME_LEN);
-        // lab5 add:
         proc->wait_state = 0;
         proc->cptr = proc->optr = proc->yptr = NULL;
-        proc->rq = NULL;              // 初始化运行队列为空
-        list_init(&(proc->run_link)); // 初始化运行队列的指针
+        proc->rq = NULL;   
+        list_init(&(proc->run_link)); 
         proc->time_slice = 0;
         proc->lab6_run_pool.left = proc->lab6_run_pool.right = proc->lab6_run_pool.parent = NULL;
         proc->lab6_stride = 0;
