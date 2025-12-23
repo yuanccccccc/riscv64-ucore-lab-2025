@@ -212,9 +212,12 @@ const size_t nbase = DRAM_BASE / PGSIZE;
 static void page_init(void) {
     va_pa_offset = PHYSICAL_MEMORY_OFFSET; //硬编码 0xFFFFFFFF40000000
 
-    uint64_t mem_begin = KERNEL_BEGIN_PADDR;//硬编码 0x80200000
-    uint64_t mem_size = PHYSICAL_MEMORY_END - KERNEL_BEGIN_PADDR;
-    uint64_t mem_end = PHYSICAL_MEMORY_END; //硬编码 0x88000000
+    uint64_t mem_begin = get_memory_base(); //从dtb中获取的信息
+    uint64_t mem_size  = get_memory_size();
+    if (mem_size == 0) {
+        panic("DTB memory info not available");
+    }
+    uint64_t mem_end   = mem_begin + mem_size;
 
     cprintf("physcial memory map:\n");
     cprintf("  memory: 0x%016lx, [0x%016lx, 0x%016lx].\n", mem_size, mem_begin,
