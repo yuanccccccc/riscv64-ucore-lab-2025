@@ -1,10 +1,10 @@
-### open系统调用的执行过程
+### open 系统调用的执行过程
 
-下面我们通过打开文件的系统调用open()的执行过程, 看看文件系统的不同层次是如何交互的。
+下面我们通过打开文件的系统调用`open()`的执行过程, 看看文件系统的不同层次是如何交互的。
 
 #### **通用文件访问接口层的处理流程**
 
-首先，经过syscall.c的处理之后，进入内核态，执行sysfile_open()函数
+首先，经过`syscall.c`的处理之后，进入内核态，执行`sysfile_open()`函数
 
 ```c
 // kern/fs/sysfile.c
@@ -21,11 +21,11 @@ int sysfile_open(const char *__path, uint32_t open_flags) {
 }
 ```
 
-到了这里，需要把位于用户空间的字符串__path拷贝到内核空间中的字符串path中，然后调用了file_open， file_open调用了vfs_open, 使用了VFS的接口,进入到文件系统抽象层的处理流程完成进一步的打开文件操作中。
+到了这里，需要把位于用户空间的字符串`__path`拷贝到内核空间中的字符串`path`中，然后调用了`file_open`， `file_open`调用了`vfs_open`， 使用了VFS的接口,进入到文件系统抽象层的处理流程完成进一步的打开文件操作中。
 
 #### **文件系统抽象层的处理流程**
 
-1、分配一个空闲的file数据结构变量file在文件系统抽象层的处理中，首先调用的是file_open函数，它要给这个即将打开的文件分配一个file数据结构的变量，这个变量其实是当前进程的打开文件数组current->fs_struct->filemap[]中的一个空闲元素（即还没用于一个打开的文件），而这个元素的索引值就是最终要返回到用户进程并赋值给变量fd。到了这一步还仅仅是给当前用户进程分配了一个file数据结构的变量，还没有找到对应的文件索引节点。
+1、分配一个空闲的`file`数据结构变量`file`在文件系统抽象层的处理中，首先调用的是`file_open`函数，它要给这个即将打开的文件分配一个`file`数据结构的变量，这个变量其实是当前进程的打开文件数组`current->fs_struct->filemap[]`中的一个空闲元素（即还没用于一个打开的文件），而这个元素的索引值就是最终要返回到用户进程并赋值给变量`fd`。到了这一步还仅仅是给当前用户进程分配了一个`file`数据结构的变量，还没有找到对应的文件索引节点。
 
 ```c
 // kern/fs/file.c
@@ -70,7 +70,7 @@ int file_open(char *path, uint32_t open_flags) {
 
 ```
 
-为此需要进一步调用vfs_open函数来找到path指出的文件所对应的基于inode数据结构的VFS索引节点node。vfs_open函数需要完成两件事情：通过vfs_lookup找到path对应文件的inode；调用vop_open函数打开文件。vfs_open是一个比较复杂的函数，这里我们使用的打开文件的flags, 基本是参照linux，如果希望详细了解，可以阅读[linux manual: open](https://man7.org/linux/man-pages/man2/open.2.html)。
+为此需要进一步调用`vfs_open`函数来找到`path`指出的文件所对应的基于`inode`数据结构的VFS索引节点`node`。`vfs_open`函数需要完成两件事情：通过`vfs_lookup`找到`path`对应文件的`inode`；调用`vop_open`函数打开文件。`vfs_open`是一个比较复杂的函数，这里我们使用的打开文件的`flags`， 基本是参照linux，如果希望详细了解，可以阅读[linux manual: open](https://man7.org/linux/man-pages/man2/open.2.html)。
 
 ```c
 
@@ -150,7 +150,7 @@ linux manual
 
 ```
 
-vfs_lookup函数是一个针对目录的操作函数，它会调用vop_lookup函数来找到SFS文件系统中的目录下的文件。为此，vfs_lookup函数首先调用get_device函数，并进一步调用vfs_get_bootfs函数（其实调用了）来找到根目录“/”对应的inode。这个inode就是位于vfs.c中的inode变量bootfs_node。这个变量在init_main函数（位于kern/process/proc.c）执行时获得了赋值。通过调用vop_lookup函数来查找到根目录“/”下对应文件sfs_filetest1的索引节点，，如果找到就返回此索引节点。
+`vfs_lookup`函数是一个针对目录的操作函数，它会调用`vop_lookup`函数来找到SFS文件系统中的目录下的文件。为此，`vfs_lookup`函数首先调用`get_device`函数，并进一步调用`vfs_get_bootfs`函数（其实调用了）来找到根目录`“/”`对应的`inode`。这个`inode`就是位于`vfs.c`中的`inode`变量`bootfs_node`。这个变量在`init_main`函数（位于`kern/process/proc.c`）执行时获得了赋值。通过调用`vop_lookup`函数来查找到根目录`“/”`下对应文件`sfs_filetest1`的索引节点，，如果找到就返回此索引节点。
 
 ```c
 
@@ -248,11 +248,11 @@ int vfs_lookup_parent(char *path, struct inode **node_store, char **endp){
 
 ```
 
-我们注意到，这个流程中，有大量以vop开头的函数，它们都通过一些宏和函数的转发，最后变成对inode结构体里的inode_ops结构体的“成员函数”（实际上是函数指针）的调用。对于SFS文件系统的inode来说，会变成对sfs文件系统的具体操作。
+我们注意到，这个流程中，有大量以`vop`开头的函数，它们都通过一些宏和函数的转发，最后变成对`inode`结构体里的`inode_ops`结构体的“成员函数”（实际上是函数指针）的调用。对于SFS文件系统的`inode`来说，会变成对`sfs`文件系统的具体操作。
 
 #### SFS文件系统层的处理流程
 
-这里需要分析文件系统抽象层中没有彻底分析的vop_lookup函数到底做了啥。下面我们来看看。在sfs_inode.c中的sfs_node_dirops变量定义了“.vop_lookup = sfs_lookup”，所以我们重点分析sfs_lookup的实现。注意：在lab8中，为简化代码，sfs_lookup函数中并没有实现能够对多级目录进行查找的控制逻辑（在ucore_plus中有实现）。
+这里需要分析文件系统抽象层中没有彻底分析的`vop_lookup`函数到底做了啥。下面我们来看看。在`sfs_inode.c`中的`sfs_node_dirops`变量定义了“.vop_lookup = sfs_lookup”，所以我们重点分析`sfs_lookup`的实现。注意：在lab8中，为简化代码，`sfs_lookup`函数中并没有实现能够对多级目录进行查找的控制逻辑（在ucore_plus中有实现）。
 
 ```c
 /*
@@ -283,9 +283,9 @@ sfs_lookup(struct inode *node, char *path, struct inode **node_store) {
 
 ```
 
-sfs_lookup有三个参数：node，path，node_store。其中node是根目录“/”所对应的inode节点；path是文件sfs_filetest1的绝对路径/sfs_filetest1，而node_store是经过查找获得的sfs_filetest1所对应的inode节点。
+`sfs_lookup`有三个参数：`node`，`path`，`node_store`。其中`node`是根目录`“/”`所对应的`inode`节点；`path`是文件`sfs_filetest1`的绝对路径`/sfs_filetest1`而`node_store`是经过查找获得的`sfs_filetest1`所对应的`inode`节点。
 
-sfs_lookup函数以“/”为分割符，从左至右逐一分解path获得各个子目录和最终文件对应的inode节点。在本例中是调用sfs_lookup_once查找以根目录下的文件sfs_filetest1所对应的inode节点。当无法分解path后，就意味着找到了sfs_filetest1对应的inode节点，就可顺利返回了。
+`sfs_lookup`函数以`“/”`为分割符，从左至右逐一分解`path`获得各个子目录和最终文件对应的`inode`节点。在本例中是调用`sfs_lookup_once`查找以根目录下的文件`sfs_filetest1`所对应的`inode`节点。当无法分解`path`后，就意味着找到了`sfs_filetest1`对应的`inode`节点，就可顺利返回了。
 
 ```c
 /*
@@ -313,4 +313,4 @@ sfs_lookup_once(struct sfs_fs *sfs, struct sfs_inode *sin, const char *name, str
 }
 ```
 
-当然这里讲得还比较简单，sfs_lookup_once将调用sfs_dirent_search_nolock函数来查找与路径名匹配的目录项，如果找到目录项，则根据目录项中记录的inode所处的数据块索引值找到路径名对应的SFS磁盘inode，并读入SFS磁盘inode对的内容，创建SFS内存inode。
+当然这里讲得还比较简单，`sfs_lookup_once`将调用`sfs_dirent_search_nolock`函数来查找与路径名匹配的目录项，如果找到目录项，则根据目录项中记录的`inode`所处的数据块索引值找到路径名对应的SFS磁盘`inode`，并读入SFS磁盘`inode`对的内容，创建SFS内存`inode`。

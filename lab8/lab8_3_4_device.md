@@ -1,10 +1,10 @@
 ###  设备
 
-在本实验中，为了统一地访问设备(device)，我们可以把一个设备看成一个文件，通过访问文件的接口来访问设备。目前实现了 stdin 设备文件文件、stdout 设备文件、disk0 设备。stdin 设备就是键盘，stdout 设备就是控制台终端的文本显示，而 disk0 设备是承载 SFS 文件系统的磁盘设备。下面看看 ucore 是如何让用户把设备看成文件来访问。
+在本实验中，为了统一地访问设备(`device`)，我们可以把一个设备看成一个文件，通过访问文件的接口来访问设备。目前实现了 `stdin` 设备文件文件、`stdout` 设备文件、`disk0` 设备。`stdin` 设备就是键盘，`stdout` 设备就是控制台终端的文本显示，而 `disk0` 设备是承载 SFS 文件系统的磁盘设备。下面看看 ucore 是如何让用户把设备看成文件来访问。
 
 #### 设备的定义
 
-为了表示一个设备，需要有对应的数据结构，ucore 为此定义了 struct device，如下：
+为了表示一个设备，需要有对应的数据结构，ucore 为此定义了 `struct device`，如下：
 
 可以认为`struct device`是一个比较抽象的“设备”的定义。一个具体设备，只要实现了`d_open()`打开设备， `d_close()`关闭设备，`d_io()`(读写该设备，write参数是true/false决定是读还是写)，`d_ioctl()`(input/output control)四个函数接口，就可以被文件系统使用了。
 
@@ -31,9 +31,9 @@ struct device {
 
 这个数据结构能够支持对块设备（比如磁盘）、字符设备（比如键盘）的表示，完成对设备的基本操作。
 
-但这个设备描述没有与文件系统以及表示一个文件的 inode 数据结构建立关系，为此，还需要另外一个数据结构把 device 和 inode 联通起来，这就是 vfs_dev_t 数据结构。
+但这个设备描述没有与文件系统以及表示一个文件的 inode 数据结构建立关系，为此，还需要另外一个数据结构把 device 和 inode 联通起来，这就是 `vfs_dev_t` 数据结构。
 
-利用 vfs_dev_t 数据结构，就可以让文件系统通过一个链接 vfs_dev_t 结构的双向链表找到 device 对应的 inode 数据结构，一个 inode 节点的成员变量 in_type 的值是 0x1234，则此 inode 的成员变量 in_info 将成为一个 device 结构。这样 inode 就和一个设备建立了联系，这个 inode 就是一个设备文件。
+利用 `vfs_dev_t` 数据结构，就可以让文件系统通过一个链接 `vfs_dev_t` 结构的双向链表找到 device 对应的 inode 数据结构，一个 inode 节点的成员变量 `in_type` 的值是 0x1234，则此 inode 的成员变量 `in_info` 将成为一个 device 结构。这样 inode 就和一个设备建立了联系，这个 inode 就是一个设备文件。
 
 ```c
 // kern/fs/vfs/vfsdev.c
@@ -58,7 +58,7 @@ static void unlock_vdev_list(void) {
 }
 ```
 
-ucore 虚拟文件系统为了把这些设备链接在一起，还定义了一个设备链表，即双向链表 vdev_list，这样通过访问此链表，可以找到 ucore 能够访问的所有设备文件。
+ucore 虚拟文件系统为了把这些设备链接在一起，还定义了一个设备链表，即双向链表 `vdev_list`，这样通过访问此链表，可以找到 ucore 能够访问的所有设备文件。
 
 注意这里的`vdev_list`对应一个`vdev_list_sem`。在文件系统中，互斥访问非常重要，所以我们将看到很多的`semaphore`。
 
@@ -98,9 +98,9 @@ static const struct inode_ops dev_node_ops = {
 
 
 
-#### stdin设备
+#### `stdin`设备
 
-trap.c改变了对`stdin`的处理, 将`stdin`作为一个设备(也是一个文件), 通过`sys_read()`接口读取标准输入的数据。
+`trap.c`改变了对`stdin`的处理, 将`stdin`作为一个设备(也是一个文件), 通过`sys_read()`接口读取标准输入的数据。
 
 注意，既然我们把`stdin`, `stdout`看作文件， 那么也需要先打开文件，才能进行读写。在执行用户程序之前，我们先执行了`umain.c`建立一个运行时环境，这里主要做的工作，就是让程序能够使用`stdin`, `stdout`。
 
@@ -306,7 +306,7 @@ static int stdin_io(struct device *dev, struct iobuf *iob, bool write) {
 
 ```
 
-#### stdout设备
+#### `stdout`设备
 
 `stdout`设备只需要支持写操作，调用`cputchar()`把字符打印到控制台。
 
@@ -326,7 +326,7 @@ static int stdout_io(struct device *dev, struct iobuf *iob, bool write) {
 }
 ```
 
-#### disk0设备
+#### `disk0`设备
 
 封装了一下`ramdisk`的接口，每次读取或者写入若干个block。
 
