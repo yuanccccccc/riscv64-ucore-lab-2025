@@ -57,7 +57,7 @@ struct sfs_super {
 
 #### 索引节点
 
-在 `SFS` 文件系统中，需要记录文件内容的存储位置以及文件名与文件内容的对应关系。`sfs_disk_inode` 记录了文件或目录的内容存储的索引信息，该数据结构在硬盘里储存，需要时读入内存（从磁盘读进来的是一段连续的字节，我们将这段连续的字节强制转换成`sfs_disk_inode`结构体；同样，写入的时候换一个方向强制转换）。`sfs_disk_entry` 表示一个目录中的一个文件或目录，包含该项所对应 inode 的位置和文件名，同样也在硬盘里储存，需要时读入内存。
+在 `SFS` 文件系统中，需要记录文件内容的存储位置以及文件名与文件内容的对应关系。`sfs_disk_inode` 记录了文件或目录的内容存储的索引信息，该数据结构在硬盘里储存，需要时读入内存（从磁盘读进来的是一段连续的字节，我们将这段连续的字节强制转换成`sfs_disk_inode`结构体；同样，写入的时候换一个方向强制转换）。`sfs_disk_entry` 表示一个目录中的一个文件或目录，包含该项所对应 `inode` 的位置和文件名，同样也在硬盘里储存，需要时读入内存。
 
 **磁盘索引节点**
 
@@ -121,9 +121,9 @@ struct sfs_inode {
 1. `sfs_bmap_load_nolock`：将对应 `sfs_inode` 的第 `index` 个索引指向的 block 的索引值取出存到相应的指针指向的单元（`ino_store`）。该函数只接受 `index <= inode->blocks` 的参数。当 `index == inode->blocks` 时，该函数理解为需要为 inode 增长一个 block。并标记 inode 为 dirty（所有对 inode 数据的修改都要做这样的操作，这样，当 inode 不再使用的时候，sfs 能够保证 inode 数据能够被写回到磁盘）。`sfs_bmap_load_nolock` 调用的 `sfs_bmap_get_nolock` 来完成相应的操作，阅读 `sfs_bmap_get_nolock`，了解他是如何工作的。（`sfs_bmap_get_nolock` 只由 `sfs_bmap_load_nolock` 调用）
 2. `sfs_bmap_truncate_nolock`：将多级数据索引表的最后一个 entry 释放掉。他可以认为是 `sfs_bmap_load_nolock` 中，`index == inode->blocks` 的逆操作。当一个文件或目录被删除时，sfs 会循环调用该函数直到 `inode->blocks` 减为 0，释放所有的数据页。函数通过 `sfs_bmap_free_nolock` 来实现，他应该是 `sfs_bmap_get_nolock` 的逆操作。和 `sfs_bmap_get_nolock` 一样，调用 `sfs_bmap_free_nolock` 也要格外小心。
 3. `sfs_dirent_read_nolock`：将目录的第 `slot` 个 entry 读取到指定的内存空间。他通过上面提到的函数来完成。
-4. `sfs_dirent_search_nolock`：是常用的查找函数。他在目录下查找 `name`，并且返回相应的搜索结果（文件或文件夹）的 inode 的编号（也是磁盘编号），和相应的 entry 在该目录的 index 编号以及目录下的数据页是否有空闲的 entry。（SFS 实现里文件的数据页是连续的，不存在任何空洞；而对于目录，数据页不是连续的，当某个 entry 删除的时候，SFS 通过设置 `entry->ino` 为 0 将该 entry 所在的 block 标记为 free，在需要添加新 entry 的时候，SFS 优先使用这些 free 的 entry，其次才会去在数据页尾追加新的 entry。
+4. `sfs_dirent_search_nolock`：是常用的查找函数。他在目录下查找 `name`，并且返回相应的搜索结果（文件或文件夹）的 `inode` 的编号（也是磁盘编号），和相应的 entry 在该目录的 index 编号以及目录下的数据页是否有空闲的 `entry`。（`SFS` 实现里文件的数据页是连续的，不存在任何空洞；而对于目录，数据页不是连续的，当某个 `entry` 删除的时候，`SFS` 通过设置 `entry->ino` 为 0 将该 `entry` 所在的 `block` 标记为 `free`，在需要添加新 `entry` 的时候，`SFS` 优先使用这些 `free` 的 `entry`，其次才会去在数据页尾追加新的 `entry）`
 
-注意，这些后缀为 nolock 的函数，只能在已经获得相应 inode 的 semaphore 才能调用。
+注意，这些后缀为 `nolock` 的函数，只能在已经获得相应 `inode` 的 `semaphore` 才能调用。
 
 **Inode 的文件操作函数**
 
@@ -155,9 +155,9 @@ static const struct inode_ops sfs_node_dirops = {
 };
 ```
 
-对于目录操作而言，由于目录也是一种文件，所以 `sfs_opendir`、`sys_close` 对应户进程发出的 open、close 函数。相对于 `sfs_open`，`sfs_opendir` 只是完成一些 open 函数传递的参数判断，没做其他更多的事情。目录的 close 操作与文件的 close 操作完全一致。由于目录的内容数据与文件的内容数据不同，所以读出目录的内容数据的函数是 `sfs_getdirentry()`，其主要工作是获取目录下的文件 inode 信息。
+对于目录操作而言，由于目录也是一种文件，所以 `sfs_opendir`、`sys_close` 对应户进程发出的 `open、close` 函数。相对于 `sfs_open`，`sfs_opendir` 只是完成一些 `open` 函数传递的参数判断，没做其他更多的事情。目录的 `close` 操作与文件的 `close` 操作完全一致。由于目录的内容数据与文件的内容数据不同，所以读出目录的内容数据的函数是 `sfs_getdirentry()`，其主要工作是获取目录下的文件 `inode` 信息。
 
-这里用到的`inode_ops`结构体，在`kern/fs/vfs/inode.h`定义，作用是：把关于`inode`的操作接口，集中在一个结构体里， 通过这个结构体，我们可以把Simple File System的接口（如`sfs_openfile()`)提供给上层的VFS使用。可以想象我们除了Simple File System, 还在另一块磁盘上使用完全不同的文件系统Complex File System，显然`vop_open(),vop_read()`这些接口的实现都要不一样了。对于同一个文件系统这些接口都是一样的，所以我们可以提供”属于SFS的文件的inode_ops结构体", “属于CFS的文件的inode_ops结构体"。
+这里用到的`inode_ops`结构体，在`kern/fs/vfs/inode.h`定义，作用是：把关于`inode`的操作接口，集中在一个结构体里， 通过这个结构体，我们可以把Simple File System的接口（如`sfs_openfile()`）提供给上层的VFS使用。可以想象我们除了Simple File System, 还在另一块磁盘上使用完全不同的文件系统Complex File System，显然`vop_open(),vop_read()`这些接口的实现都要不一样了。对于同一个文件系统这些接口都是一样的，所以我们可以提供”属于SFS的文件的`inode_ops`结构体", “属于CFS的文件的`inode_ops`结构体"。
 
 下面的注释里详细解释了每个接口的用途。当然，不必现在就详细了解每一个接口。
 

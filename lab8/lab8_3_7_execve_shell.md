@@ -389,5 +389,3 @@ int main(int argc, char **argv) {
 ```
 
 如果我们能够把终端运行起来，并能输入命令执行用户程序，就说明程序运行正常。
-
-目前的代码可以在[这里](https://github.com/Liurunda/riscv64-ucore/tree/lab8/lab8)找到。

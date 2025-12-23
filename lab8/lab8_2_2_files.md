@@ -198,7 +198,7 @@ FS`文件系统是否能够正常工作。本次实验涉及到的代码包括�
 * 文件系统抽象层-VFS   
   `kern/fs/vfs/*.[ch]`：虚拟文件系统接口与实现   
 * Simple FS文件系统    
-  `kern/fs/sfs/*.[ch]`：SimpleFS文件系统实现    
+  `kern/fs/sfs/*.[ch]`：`SimpleFS`文件系统实现    
 * 文件系统的硬盘IO接口   
   `kern/fs/devs/dev.[ch]` | `dev_disk0.c`：`disk0`硬盘设备提供给文件系统的I/O访问接口和实现   
 * 辅助工具    
