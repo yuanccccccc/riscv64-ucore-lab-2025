@@ -45,13 +45,11 @@
  * */
 
 /* All physical memory mapped at this address */
-#define KERNBASE            0xFFFFFFFFC0200000
-#define KMEMSIZE            0x7E00000                  // the maximum amount of physical memory
-#define KERNTOP             (KERNBASE + KMEMSIZE)
+#define KERNBASE 0xFFFFFFFFC0200000
+#define KMEMSIZE 0x7E00000 // the maximum amount of physical memory
+#define KERNTOP (KERNBASE + KMEMSIZE)
 
-#define KERNEL_BEGIN_PADDR 0x80200000
-#define KERNEL_BEGIN_VADDR 0xFFFFFFFFC0200000
-#define PHYSICAL_MEMORY_END 0x88000000
+#define PHYSICAL_MEMORY_OFFSET 0xFFFFFFFF40000000
 /* *
  * Virtual page table. Entry PDX[VPT] in the PD (Page Directory) contains
  * a pointer to the page directory itself, thereby turning the PD into a page

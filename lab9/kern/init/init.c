@@ -14,6 +14,7 @@
 #include <proc.h>
 #include <kmonitor.h>
 #include <fs.h>
+#include <dtb.h>
 
 int kern_init(void) __attribute__((noreturn));
 void grade_backtrace(void);
@@ -32,6 +33,7 @@ kern_init(void) {
 
     // grade_backtrace();
 
+    dtb_init();                 // init dtb
     pmm_init();                 // init physical memory management
 
     pic_init();                 // init interrupt controller
