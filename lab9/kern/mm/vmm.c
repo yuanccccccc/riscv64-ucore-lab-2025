@@ -372,7 +372,7 @@ check_pgfault(void)
     assert(check_mm_struct != NULL);
 
     struct mm_struct *mm = check_mm_struct;
-    pde_t *pgdir = mm->pgdir = boot_pgdir;
+    pde_t *pgdir = mm->pgdir = boot_pgdir_va;
     assert(pgdir[0] == 0);
 
     struct vma_struct *vma = vma_create(0, PTSIZE, VM_WRITE);
