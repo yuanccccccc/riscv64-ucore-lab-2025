@@ -1,5 +1,7 @@
-*/obj/*
 */bin/*
+*/obj/*
 */.gdb.in
 */.qemu.out
-*.log
+*/.log
+*/.*.log
+*/disk0/*

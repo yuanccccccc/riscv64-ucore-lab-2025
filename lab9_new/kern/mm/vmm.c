@@ -372,7 +372,7 @@ check_pgfault(void)
     assert(check_mm_struct != NULL);
 
     struct mm_struct *mm = check_mm_struct;
-    pde_t *pgdir = mm->pgdir = boot_pgdir;
+    pde_t *pgdir = mm->pgdir = boot_pgdir_va;
     assert(pgdir[0] == 0);
 
     struct vma_struct *vma = vma_create(0, PTSIZE, VM_WRITE);
@@ -558,29 +558,29 @@ int do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr)
     {
         // PTE不为0，可能是swap条目或者是已存在的页面
         /*LAB9 : YOUR CODE
-        * 请你根据以下信息提示，补充函数
-        * 现在我们认为pte是一个交换条目，那我们应该从磁盘加载数据并放到带有phy addr的页面，
-        * 并将phy addr与逻辑addr映射，触发交换管理器记录该页面的访问情况
-        *
-        *  一些有用的宏和定义，可能会对你接下来代码的编写产生帮助(显然是有帮助的)
-        *  宏或函数:
-        *    swap_in(mm, addr, &page) : 分配一个内存页，然后根据
-        *    PTE中的swap条目的addr，找到磁盘页的地址，将磁盘页的内容读入这个内存页
-        *    page_insert ： 建立一个Page的phy addr与线性addr la的映射
-        *    swap_map_swappable ： 设置页面可交换
-        */
+         * 请你根据以下信息提示，补充函数
+         * 现在我们认为pte是一个交换条目，那我们应该从磁盘加载数据并放到带有phy addr的页面，
+         * 并将phy addr与逻辑addr映射，触发交换管理器记录该页面的访问情况
+         *
+         *  一些有用的宏和定义，可能会对你接下来代码的编写产生帮助(显然是有帮助的)
+         *  宏或函数:
+         *    swap_in(mm, addr, &page) : 分配一个内存页，然后根据
+         *    PTE中的swap条目的addr，找到磁盘页的地址，将磁盘页的内容读入这个内存页
+         *    page_insert ： 建立一个Page的phy addr与线性addr la的映射
+         *    swap_map_swappable ： 设置页面可交换
+         */
         if (swap_init_ok)
         {
             // swap 页：从交换区换入
             struct Page *page = NULL;
             // 你要编写的内容在这里，请基于上文说明以及下文的英文注释完成代码编写
             //(1）According to the mm AND addr, try
-            //to load the content of right disk page
-            //into the memory which page managed.
+            // to load the content of right disk page
+            // into the memory which page managed.
             //(2) According to the mm,
-            //addr AND page, setup the
-            //map of phy addr <--->
-            //logical addr
+            // addr AND page, setup the
+            // map of phy addr <--->
+            // logical addr
             //(3) make the page swappable.
             page->pra_vaddr = addr;
         }
@@ -705,9 +705,9 @@ uintptr_t do_mmap(struct mm_struct *mm, uintptr_t addr, size_t len, uint32_t vm_
         // 4. 使用find_vma函数检查地址是否已被占用
         // 5. 遍历mm->mmap_list链表查找相邻vma之间的空闲区域
         // 6. 对于每个空闲区域，检查其大小是否足够，并记录最佳适配的地址
-        
+
         /* 请在此处填写你的代码 */
-        
+
         if (addr == 0)
         {
             cprintf("[do_mmap] failed to find free address space\n");
@@ -742,7 +742,7 @@ uintptr_t do_mmap(struct mm_struct *mm, uintptr_t addr, size_t len, uint32_t vm_
     // 1. 创建vma_struct结构体，设置起始地址、结束地址和标志
     // 2. 如果是文件映射，设置vm_file和vm_pgoff，并增加文件引用计数
     // 3. 将vma插入到进程的vma链表中
-    
+
     /* 请在此处填写你的代码 */
 
     // 返回分配的地址
@@ -771,7 +771,7 @@ int do_munmap(struct mm_struct *mm, uintptr_t addr, size_t len)
     // 1. 使用find_vma查找包含addr的vma
     // 2. 验证vma的起始地址和结束地址与请求完全匹配
     // 3. 如果不匹配，返回错误
-    
+
     /* 请在此处填写你的代码 */
 
     // 取消页表映射
@@ -782,7 +782,7 @@ int do_munmap(struct mm_struct *mm, uintptr_t addr, size_t len)
     // 提示：
     // 1. 如果vma是文件映射，需要减少文件引用计数
     // 2. 引用计数为0时会自动关闭文件
-    
+
     /* 请在此处填写你的代码 */
 
     /* lab9 练习3：YOUR CODE
@@ -791,9 +791,8 @@ int do_munmap(struct mm_struct *mm, uintptr_t addr, size_t len)
     // 1. 从进程的vma链表中删除该vma
     // 2. 释放vma结构体内存
     // 3. 更新进程的map_count计数器
-    
+
     /* 请在此处填写你的代码 */
 
     return 0;
 }
-
