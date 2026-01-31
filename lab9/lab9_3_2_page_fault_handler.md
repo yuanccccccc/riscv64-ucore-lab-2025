@@ -110,69 +110,66 @@ static inline void *page2kva(struct Page *page) {
 
 ```c
 // kern/mm/vmm.c
-
 int do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
-    // ... 1) vma 查找 + 地址合法性检查 ...
+    int ret = -E_INVAL;
+    // 1. 查找 vma 结构与地址合法性检查
     struct vma_struct *vma = find_vma(mm, addr);
+    pgfault_num++;
     if (vma == NULL || vma->vm_start > addr) {
         return -E_INVAL;
     }
 
-    // ... 2) 写权限检查（RISC-V: error_code==15 表示 store page fault）...
-    if (error_code == 15 && !(vma->vm_flags & VM_WRITE)) {
+    // 2. 写权限检查（仅对写操作检查）
+    // RISC-V: cause == 15 (CAUSE_STORE_PAGE_FAULT) 表示写操作
+    bool is_write = (error_code == 15);
+    if (is_write && !(vma->vm_flags & VM_WRITE)) {
         return -E_INVAL;
     }
 
-    // 3) 计算页权限：RISC-V 访问页必须带 PTE_R
+    // 3. 设置页权限：RISC-V 要求必须设置 PTE_R
     uint32_t perm = PTE_U | PTE_R;
     if (vma->vm_flags & VM_WRITE) {
         perm |= PTE_W;
     }
 
     addr = ROUNDDOWN(addr, PGSIZE);
+    // 4. 获取 PTE（必要时创建页表）
     pte_t *ptep = get_pte(mm->pgdir, addr, 1);
     if (ptep == NULL) {
         return -E_NO_MEM;
     }
 
-    // 4) 文件映射缺页（此处略去细节：真实代码会在 *ptep==0 时分配页并从文件读取）
+    /*
+     * 5. mmap 文件映射缺页处理
+     * 如果 vma->vm_file 不为空，说明是文件映射
+     */
     if (vma->vm_file != NULL) {
-        return 0;
     }
 
-    // 5) 匿名页 / swap 缺页
+    /*
+     * 6. 匿名页 / swap 缺页处理
+     */
     if (*ptep == 0) {
-        // 第一次访问该虚拟页：分配新物理页并建立映射
+        // 匿名页：分配新页并清零
         if (pgdir_alloc_page(mm->pgdir, addr, perm) == NULL) {
             return -E_NO_MEM;
         }
-        return 0;
-    }
-
-    // *ptep != 0：可能是 swap entry，也可能是有效页
-    if (swap_init_ok) {
-        // swap 已初始化：把 swap entry 对应页换入
-        struct Page *page = NULL;
-        int ret = swap_in(mm, addr, &page);
-        if (ret != 0) {
-            return ret;
+    } else {
+        // PTE不为0，可能是swap条目
+        if (swap_init_ok) {
+            struct Page *page = NULL;
+            // 从 swap 分区换入页面
+            if ((ret = swap_in(mm, addr, &page)) != 0) {
+                return ret;
+            }
+            // 建立映射并更新可交换标记
+            page_insert(mm->pgdir, page, addr, perm);
+            swap_map_swappable(mm, addr, page, 1);
+            page->pra_vaddr = addr;
         }
-        page_insert(mm->pgdir, page, addr, perm);
-        swap_map_swappable(mm, addr, page, 1);
-        page->pra_vaddr = addr;
-        return 0;
+        // ... 其他情况（如 swap 未初始化时的错误处理） ...
     }
 
-    // swap 未初始化但 *ptep != 0：
-    // - 若 PTE_V 置位，说明已是有效页（可能是权限问题），直接返回
-    // - 否则清空并按匿名页重新分配
-    if (*ptep & PTE_V) {
-        return 0;
-    }
-    *ptep = 0;
-    if (pgdir_alloc_page(mm->pgdir, addr, perm) == NULL) {
-        return -E_NO_MEM;
-    }
     return 0;
 }
 ```

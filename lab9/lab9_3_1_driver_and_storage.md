@@ -67,6 +67,8 @@ static int ramdisk_write(struct ide_device *dev, size_t secno, const void *src,
 ```c
 // IDE 设备抽象结构（关键字段）
 struct ide_device {
+    
+    // 其他成员
     unsigned int size;   // 设备总扇区数
     uintptr_t iobase;    // 数据区基地址
     // 多态的关键：函数指针
