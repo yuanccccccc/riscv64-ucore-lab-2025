@@ -3,7 +3,7 @@
 #### Lab9 项目组成
 
 ```
-lab8
+lab9
 ├── CMakeLists.txt
 ├── giveitatry.pyq
 ├── kern
