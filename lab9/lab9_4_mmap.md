@@ -31,6 +31,8 @@ struct vma_struct {
 mmap使用两组标志位来控制映射的行为。保护标志（prot）定义在`libs/unistd.h`中，用于指定映射区域的访问权限：
 
 ```c
+// libs/unistd.h
+
 /* mmap protection flags */
 #define PROT_NONE           0x0         // 页面不可访问
 #define PROT_READ           0x1         // 页面可读
@@ -51,32 +53,46 @@ mmap使用两组标志位来控制映射的行为。保护标志（prot）定义
 值得注意的是，`do_mmap`只创建VMA结构，并不实际分配物理页面。物理页面的分配延迟到缺页异常时进行，这就是所谓的延迟分配策略。
 
 ```c
-uintptr_t do_mmap(struct mm_struct *mm, uintptr_t addr, size_t len, 
-                  uint32_t vm_flags, struct file *file, off_t offset) {
-    len = ROUNDUP(len, PGSIZE);
+// kern/mm/vmm.c
 
-    // 自动查找空闲区域
+uintptr_t do_mmap(struct mm_struct *mm, uintptr_t addr, size_t len, uint32_t vm_flags,
+                  struct file *file, off_t offset) {
+    if (len == 0)
+    {
+        return -E_INVAL;
+    }
+    len = ROUNDUP(len, PGSIZE);
     if (addr == 0) {
-        uintptr_t search_addr = 0x60000000;
-        while (search_addr < USERTOP - len) {
-            struct vma_struct *vma = find_vma(mm, search_addr);
-            if (vma == NULL) {
-                // 检查到下一个VMA之间是否有足够空间
-                addr = search_addr;
-                break;
-            }
-            search_addr = vma->vm_end;
+        
+        /* lab9 练习4：YOUR CODE
+        实现最佳适配（Best-Fit）地址分配算法 */
+
+        if (addr == 0) {
+            cprintf("[do_mmap] failed to find free address space\n");
+            return -E_NO_MEM;
         }
     }
-
-    // 创建VMA
-    struct vma_struct *vma = vma_create(addr, addr + len, vm_flags);
-    if (file != NULL) {
-        vma->vm_file = file;
-        vma->vm_pgoff = offset / PGSIZE;
-        fopen_count_inc(file);
+    else {
+        addr = ROUNDDOWN(addr, PGSIZE);
     }
-    insert_vma_struct(mm, vma);
+    cprintf("[do_mmap] addr=0x%x, len=0x%x, flags=0x%x, file=%p\n",
+            addr, len, vm_flags, file);
+    if (!USER_ACCESS(addr, addr + len)) {
+        cprintf("[do_mmap] USER_ACCESS check failed\n");
+        return -E_INVAL;
+    }
+
+    // 检查地址重叠
+    struct vma_struct *vma = find_vma(mm, addr);
+    if (vma != NULL && addr + len > vma->vm_start) {
+        cprintf("[do_mmap] overlapping with existing vma\n");
+        return -E_INVAL;
+    }
+    
+    /* lab9 练习3：YOUR CODE
+    理解VMA创建和文件映射设置 */
+
+    // 返回分配的地址
     return addr;
 }
 ```
@@ -90,6 +106,8 @@ uintptr_t do_mmap(struct mm_struct *mm, uintptr_t addr, size_t len,
 对于文件映射的缺页处理，函数分配一个物理页面，先将其清零，然后计算文件偏移量——文件偏移由VMA的页偏移（`vm_pgoff`）加上当前页相对于映射起始的偏移组成。接着通过`file_seek`定位到正确位置，用`file_read`读取一页数据到物理页面中。为了不影响其他文件操作，读取前后需要保存和恢复文件游标位置。对于匿名映射的缺页处理则与普通的缺页处理相同，只需分配一个物理页面即可，`pgdir_alloc_page`会自动将页面清零。
 
 ```c
+// kern/mm/vmm.c
+
 int do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
     struct vma_struct *vma = find_vma(mm, addr);
     if (vma == NULL || vma->vm_start > addr) {
