@@ -372,7 +372,7 @@ check_pgfault(void)
     assert(check_mm_struct != NULL);
 
     struct mm_struct *mm = check_mm_struct;
-    pde_t *pgdir = mm->pgdir = boot_pgdir;
+    pde_t *pgdir = mm->pgdir = boot_pgdir_va;
     assert(pgdir[0] == 0);
 
     struct vma_struct *vma = vma_create(0, PTSIZE, VM_WRITE);
@@ -414,107 +414,6 @@ check_pgfault(void)
 }
 // page fault number
 volatile unsigned int pgfault_num = 0;
-
-// /* do_pgfault - interrupt handler to process the page fault execption
-//  * @mm         : the control struct for a set of vma using the same PDT
-//  * @error_code : the error code recorded in trapframe->tf_err which is setted by x86 hardware
-//  * @addr       : the addr which causes a memory access exception, (the contents of the CR2 register)
-//  *
-//  * CALL GRAPH: trap--> trap_dispatch-->pgfault_handler-->do_pgfault
-//  * The processor provides ucore's do_pgfault function with two items of information to aid in diagnosing
-//  * the exception and recovering from it.
-//  *   (1) The contents of the CR2 register. The processor loads the CR2 register with the
-//  *       32-bit linear address that generated the exception. The do_pgfault fun can
-//  *       use this address to locate the corresponding page directory and page-table
-//  *       entries.
-//  *   (2) An error code on the kernel stack. The error code for a page fault has a format different from
-//  *       that for other exceptions. The error code tells the exception handler three things:
-//  *         -- The P flag   (bit 0) indicates whether the exception was due to a not-present page (0)
-//  *            or to either an access rights violation or the use of a reserved bit (1).
-//  *         -- The W/R flag (bit 1) indicates whether the memory access that caused the exception
-//  *            was a read (0) or write (1).
-//  *         -- The U/S flag (bit 2) indicates whether the processor was executing at user mode (1)
-//  *            or supervisor mode (0) at the time of the exception.
-//  */
-// int
-// do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
-//     int ret = -E_INVAL;
-//     //try to find a vma which include addr
-//     struct vma_struct *vma = find_vma(mm, addr);
-
-//     pgfault_num++;
-//     //If the addr is in the range of a mm's vma?
-//     if (vma == NULL || vma->vm_start > addr) {
-//         cprintf("not valid addr %x, and  can not find it in vma\n", addr);
-//         goto failed;
-//     }
-
-//     /* IF (write an existed addr ) OR
-//      *    (write an non_existed addr && addr is writable) OR
-//      *    (read  an non_existed addr && addr is readable)
-//      * THEN
-//      *    continue process
-//      */
-//     uint32_t perm = PTE_U;
-//     if (vma->vm_flags & VM_WRITE) {
-//         perm |= READ_WRITE;
-//     }
-//     addr = ROUNDDOWN(addr, PGSIZE);
-
-//     ret = -E_NO_MEM;
-
-//     pte_t *ptep=NULL;
-//     /*LAB3 EXERCISE 1: YOUR CODE
-//     * Maybe you want help comment, BELOW comments can help you finish the code
-//     *
-//     * Some Useful MACROs and DEFINEs, you can use them in below implementation.
-//     * MACROs or Functions:
-//     *   get_pte : get an pte and return the kernel virtual address of this pte for la
-//     *             if the PT contians this pte didn't exist, alloc a page for PT (notice the 3th parameter '1')
-//     *   pgdir_alloc_page : call alloc_page & page_insert functions to allocate a page size memory & setup
-//     *             an addr map pa<--->la with linear address la and the PDT pgdir
-//     * DEFINES:
-//     *   VM_WRITE  : If vma->vm_flags & VM_WRITE == 1/0, then the vma is writable/non writable
-//     *   PTE_W           0x002                   // page table/directory entry flags bit : Writeable
-//     *   PTE_U           0x004                   // page table/directory entry flags bit : User can access
-//     * VARIABLES:
-//     *   mm->pgdir : the PDT of these vma
-//     *
-//     */
-//     // try to find a pte, if pte's PT(Page Table) isn't existed, then create a PT.
-//     // (notice the 3th parameter '1')
-//     if ((ptep = get_pte(mm->pgdir, addr, 1)) == NULL) {
-//         cprintf("get_pte in do_pgfault failed\n");
-//         goto failed;
-//     }
-
-//     if (*ptep == 0) { // if the phy addr isn't exist, then alloc a page & map the phy addr with logical addr
-//         if (pgdir_alloc_page(mm->pgdir, addr, perm) == NULL) {
-//             cprintf("pgdir_alloc_page in do_pgfault failed\n");
-//             goto failed;
-//         }
-//     }
-//     else { // if this pte is a swap entry, then load data from disk to a page with phy addr
-//            // and call page_insert to map the phy addr with logical addr
-//         if(swap_init_ok) {
-//             struct Page *page=NULL;
-//             if ((ret = swap_in(mm, addr, &page)) != 0) {
-//                 cprintf("swap_in in do_pgfault failed\n");
-//                 goto failed;
-//             }
-//             page_insert(mm->pgdir, page, addr, perm);
-//             swap_map_swappable(mm, addr, page, 1);
-//             page->pra_vaddr = addr;
-//         }
-//         else {
-//             cprintf("no swap_init_ok but ptep is %x, failed\n",*ptep);
-//             goto failed;
-//         }
-//    }
-//    ret = 0;
-// failed:
-//     return ret;
-// }
 
 int do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr)
 {
