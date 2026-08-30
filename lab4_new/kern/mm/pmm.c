@@ -271,19 +271,9 @@ struct Page *get_page(pde_t *pgdir, uintptr_t la, pte_t **ptep_store)
 // note: PT is changed, so the TLB need to be invalidate
 static inline void page_remove_pte(pde_t *pgdir, uintptr_t la, pte_t *ptep)
 {
-    if (*ptep & PTE_V)
-    { //(1) check if this page table entry is
-        struct Page *page =
-            pte2page(*ptep); //(2) find corresponding page to pte
-        page_ref_dec(page);  //(3) decrease page reference
-        if (page_ref(page) ==
-            0)
-        { //(4) and free this page when page reference reachs 0
-            free_page(page);
-        }
-        *ptep = 0;                 //(5) clear second page table entry
-        tlb_invalidate(pgdir, la); //(6) flush tlb
-    }
+    // LAB4:EXERCISE YOUR CODE
+
+    
 }
 
 // page_remove - free an Page which is related linear address la and has an
@@ -307,27 +297,9 @@ void page_remove(pde_t *pgdir, uintptr_t la)
 // note: PT is changed, so the TLB need to be invalidate
 int page_insert(pde_t *pgdir, struct Page *page, uintptr_t la, uint32_t perm)
 {
-    pte_t *ptep = get_pte(pgdir, la, 1);
-    if (ptep == NULL)
-    {
-        return -E_NO_MEM;
-    }
-    page_ref_inc(page);
-    if (*ptep & PTE_V)
-    {
-        struct Page *p = pte2page(*ptep);
-        if (p == page)
-        {
-            page_ref_dec(page);
-        }
-        else
-        {
-            page_remove_pte(pgdir, la, ptep);
-        }
-    }
-    *ptep = pte_create(page2ppn(page), PTE_V | perm);
-    tlb_invalidate(pgdir, la);
-    return 0;
+    // LAB4:EXERCISE YOUR CODE
+
+
 }
 
 // invalidate a TLB entry, but only if the page tables being
